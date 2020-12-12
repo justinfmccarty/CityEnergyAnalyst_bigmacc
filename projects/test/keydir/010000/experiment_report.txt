@@ -1,0 +1,4 @@
+Experiment Report
+typology = baseline
+zone = baseline
+weather = ubc_2071-2100

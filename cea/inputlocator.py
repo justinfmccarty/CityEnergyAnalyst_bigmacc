@@ -1017,6 +1017,12 @@ class InputLocator(object):
         """Returns the path to a file in the temporary folder with the name `filename`"""
         return os.path.join(self.get_temporary_folder(), filename)
 
+    # BIGMACC
+
+    def get_data_results_folder(self):
+        """scenario/outputs/data/demand"""
+        return self._ensure_folder(self.scenario, 'outputs', 'data')
+
 
 def check_cpg(shapefile_path):
     # ensures that the CPG file is the correct one

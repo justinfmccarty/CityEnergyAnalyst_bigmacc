@@ -1,0 +1,5 @@
+Experiment Report
+typology = baseline
+zone = baseline
+weather = hburg_2080_hadcm3
+

@@ -464,3 +464,58 @@ Development:
     interfaces: [dev]
     module: cea.dev.build
     parameters: [development]
+
+
+BIGMACC:
+  - name: bigmacc
+    label: first script
+    description: learning the config
+    interfaces: [ cli, dashboard ]
+    module: cea.bigmacc.bigmacc
+    parameters: [ 'general:scenario',
+                  'bigmacc:keys',
+                  archetypes-mapper]
+    input-files:
+      - [ get_zone_geometry ]
+      - [ get_building_typology ]
+
+  - name: looptest
+    label: for looping through experiments
+    description: the base for the eta lab workflow
+    interfaces: [cli, dashboard]
+    module: cea.bigmacc.looptestV1
+    parameters: [ 'general:scenario',
+                  'general:multiprocessing',
+                  'general:number-of-cpus-to-keep-free',
+                  'general:debug',
+                  radiation,
+                  demand,
+                  'general:scenario',
+                  weather-helper,
+                  archetypes-mapper,
+                  'bigmacc:keys']
+    input-files:
+      - [ get_zone_geometry ]
+      - [ get_building_typology ]
+
+  - name: typology-mover
+    label: typology mover
+    description: Copies a new typology file in for the experiment loops
+    interfaces: [ cli, dashboard ]
+    module: cea.bigmacc.typology_mover
+    parameters: [get_building_typology]
+
+  - name: typology-helper
+    label: typology helper
+    description: Copies a new zone file in for the experiment loops
+    interfaces: [ cli, dashboard ]
+    module: cea.bigmacc.zone_mover
+    parameters: [ get_zone_geometry ]
+
+  - name: copy-results
+    label: copy results
+    description: Copies the results from the scenario in the for loop and places them in the permanent key directory
+    interfaces: [ cli, dashboard ]
+    module: cea.bigmacc.copy_results
+    parameters: [ get_demand_results_folder ]
+

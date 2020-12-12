@@ -423,7 +423,8 @@ def main(config):
     made to this script (e.g. refactorings) do not stop the script from working and also that the results stay the same.
     """
 
-    print('Running archetypes-mapper with scenario = %s' % config.scenario)
+    #JM edited print statement for bigmacc
+    print(' - Running archetypes-mapper.') # with scenario = %s' % config.scenario)
 
     update_architecture_dbf = 'architecture' in config.archetypes_mapper.input_databases
     update_air_conditioning_systems_dbf = 'air-conditioning' in config.archetypes_mapper.input_databases
