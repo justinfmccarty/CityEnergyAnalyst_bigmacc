@@ -13,7 +13,7 @@ import cea.demand.demand_main
 import cea.resources.radiation_daysim.radiation_main
 import cea.bigmacc.copy_results
 import cea.datamanagement.archetypes_mapper
-
+import cea.bigmacc.bigmacc_util as bigmacc_util
 
 
 __author__ = "Justin McCarty"
@@ -57,6 +57,12 @@ def main(config):
     for i in keylist:
         print('START: experiment {}.'.format(i))
 
+
+
+        # commandpath = os.path.join(config.bigmacc.keys, '{}'.format(i), 'commandfile_{}.txt'.format(i))
+
+
+
         # load in the new weather file
         print(' - Transferring weather file for experiment {}.'.format(i))
         weatherpath = os.path.join(config.bigmacc.keys, '{}'.format(i), 'weather')
@@ -82,16 +88,23 @@ def main(config):
             pass
 
         # run the archetype mapper to leverage the newly loaded typology file and set parameters
+        print(' - Running archetype mapper for experiment {}.'.format(i))
         try:
             cea.datamanagement.archetypes_mapper.main(config)
         except:
             pass
 
         ## SIMULATIONS ---
-        try:
-            cea.resources.radiation_daysim.radiation_main.main(config)
-        except:
-            pass
+        if bigmacc_util.parsecommands(commandpath, 'run_radiation') == 'True':
+            print(' - Running radiation simulation for experiment {}.'.format(i))
+            try:
+                cea.resources.radiation_daysim.radiation_main.main(config)
+            except:
+                pass
+        else:
+            print(' - Experiment {} does not require new radiation simulation.'.format(i))
+
+        print(' - Running demand simulation for experiment {}.'.format(i))
         try:
             cea.demand.demand_main.main(config)
         except:
