@@ -476,7 +476,7 @@ BIGMACC:
     parameters: [ 'general:scenario',
                   'bigmacc:keys',
                   'bigmacc:rooftop',
-                  'bigmacc:rooftop']
+                  'bigmacc:commandpath',]
 #                  archetypes-mapper]
     input-files:
       - [ get_zone_geometry ]

@@ -1018,10 +1018,16 @@ class InputLocator(object):
         return os.path.join(self.get_temporary_folder(), filename)
 
     # BIGMACC
-
     def get_data_results_folder(self):
         """scenario/outputs/data/demand"""
         return self._ensure_folder(self.scenario, 'outputs', 'data')
+
+    def get_project_temp_folder(self):
+        """project"""
+        return self._ensure_folder(os.path.join(self.scenario,'temp'))
+
+    def get_alt_use_type_properties(self):
+        return os.path.join(self.get_project_temp_folder(),'USE_TYPE_PROPERTIES.xlsx')
 
 
 def check_cpg(shapefile_path):

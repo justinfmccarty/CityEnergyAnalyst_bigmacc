@@ -24,7 +24,7 @@ __email__ = ""
 __status__ = ""
 
 
-def parsecommands(config_file, setting):
-    config = configparser.ConfigParser()
-    config.read(config_file)
-    return config["commands"][setting]
+def copy_file(locator):
+
+
+    return

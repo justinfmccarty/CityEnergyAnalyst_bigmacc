@@ -8,6 +8,7 @@ NOTE: ADD YOUR SCRIPT'S DOCUMENTATION HERE (what, why, include literature refere
 import os
 import cea.config
 import cea.inputlocator
+import cea.utilities.dbf
 import cea.demand.demand_main as dm
 import cea.resources.radiation_daysim.radiation_main as rm
 import cea.bigmacc.typology_mover as tm
@@ -30,25 +31,17 @@ __status__ = ""
 #     print(5)
 #     print(config.scenario)
 #     print(locator.get_building_geometry_folder())
-
-def main(config):
+#
+def run_bigmacc_rules(config, locator):
     """
-    This is the main entry point to your script. Any parameters used by your script must be present in the ``config``
-    parameter. The CLI will call this ``main`` function passing in a ``config`` object after adjusting the configuration
-    to reflect parameters passed on the command line / user interface
+    Applies the current key to a set of rules. If a rule is triggered the script carries out an operation for that rule.
 
     :param config:
     :type config: cea.config.Configuration
+    :param locator:
+    :type locator: cea.inputlocator.InputLocator
     :return:
     """
-
-    # locator = cea.inputlocator.InputLocator(config.scenario)
-
-    print(config.bigmacc.rooftop)
-
-    config.bigmacc.rooftop = 'true'
-
-    print(config.bigmacc.rooftop)
 
     key_directory = config.bigmacc.keys
     keylist = [dI for dI in os.listdir(key_directory) if os.path.isdir(os.path.join(key_directory, dI))]
@@ -59,66 +52,100 @@ def main(config):
         keys = [int(x) for x in str(i)]
         print(keys[0])
 
-    # SETPOINT
-    if keys[0]==1:
-        #replace usetype_properties w/modified
-    else:
-        # replace usetype_properties w/baseline
-
-    # GREEN ROOF
-    if keys[1]==1:
-        # in all buildings set type_roof = green_roof option
-    else:
-        # in all buildings set type_roof = baseline roof option
-
-    # WALL AND WINDOW RETROFIT
-    if keys[2] == 1:
-        # in existing buildings set type_win, type_leak, type_roof = high_performance options
-    else:
-        # in existing buildings set type_win, type_leak, type_roof = default
-
-    # NEW BUILD REQ PASSIVE
-    if keys[3] == 1:
-        # in new buildings set construction_standard = passive_house depending on type
-    else:
-        # in new buildings set construction_standard = default depending on type
-
-    # HEAT PUMPS IN ALL BUILDINGS
-    if keys[4] == 1:
-        # in all buildings set HVAC_HEATING_AS4, HVAC_COOLING_AS5, SUPPLY_HEATING_AS7, SUPPLY_COOLING_AS1
-    else:
-        #
-
-    # NEW BUILD REQ MASS TIMBER
-    if keys[5] == 1:
-        # in new buildings set type_cons = CONSTRUCTION_AS2
-        # COMPUTE EMBODIED CARBON
-    else:
-        #
-
-    # SEAWATER COOLING LOOP
-    if keys[6] == 1:
-        # in all buildings set HVAC_HEATING_AS4, HVAC_COOLING_AS5, SUPPLY_HEATING_AS7, SUPPLY_COOLING_AS3
-    else:
-        #
-
-    # ROOFTOP PV
-    if keys[7] == 1:
-
-        # perma set config.bigmacc.rooftop = 'true'
-
-        # check for green roof
-        if keys[1] == 1:
-            # in all buildings set roof_type to PV+green roof
-            # perma set config.bigmacc.heatgain = 0.4
+        # SETPOINT
+        if keys[0]==1:
+            from shutil import copyfile
+            copyfile(locator.get_alt_use_type_properties(), locator.get_database_use_types_properties())
+            print(' - Replacing set temperatures for experiment {}.'.format(i))
         else:
-            # in all buildings set roof_type to PV roof
-            # perma set config.bigmacc.heatgain = 0.1
-    else:
-        #
+            print(' - Experiment {} does not use altered set temperatures.'.format(i))
+
+        # GREEN ROOF
+        if keys[1]==1:
+            # in all buildings set type_roof = green_roof option
+            arch_path = locator.get_building_architecture()
+            arch = cea.utilities.dbf.dbf_to_dataframe(arch_path)
+            arch['type_roof'] = 'ROOF_AS16'
+            cea.utilities.dbf.dataframe_to_dbf(arch, arch_path)
+            print(' - Replacing type_roof with green roof construction for experiment {}.'.format(i))
+        else:
+            print(' - Experiment {} does not implement out of ordinary green roofs.'.format(i))
+
+        # WALL AND WINDOW RETROFIT
+        if keys[2] == 1:
+            # in existing buildings set type_win, type_leak, type_wall = high_performance options
+            arch_path = locator.get_building_architecture()
+            arch = cea.utilities.dbf.dbf_to_dataframe(arch_path)
+            arch['type_win'] = 'WINDOW_AS6' #triple glazing low-e two way
+            arch['type_leak'] = 'TIGHTNESS_AS2' #second best
+            arch['type_wall'] = 'WALL_AS17'
+
+            arch['wwr_north'] = 0.20
+            arch['wwr_east'] = 0.20
+            arch['wwr_south'] = 0.20
+            arch['wwr_west'] = 0.20
+            cea.utilities.dbf.dataframe_to_dbf(arch, arch_path)
+            print(' - Replacing type_win, type_leak, type_wall with high performance retrofits and reducing WWR to 20% for experiment {}.'.format(i))
+        else:
+            print(' - Experiment {} does not implement out of ordinary wall and window constructions.'.format(i))
+
+        # NEW BUILD REQ PASSIVE
+        if keys[3] == 1:
+            print(' - Setting all new construction to passive house standard for experiment {}.'.format(i))
+        else:
+            print(' - Experiment {} does not require new construction to be passive house.'.format(i))
+
+        # HEAT PUMPS IN ALL BUILDINGS
+        if keys[4] == 1:
+            # in all buildings set HVAC_HEATING_AS4, HVAC_COOLING_AS5, SUPPLY_HEATING_AS7, SUPPLY_COOLING_AS1
+            print(' - Aligning SUPPLY_HOTWATER_AS7, HVAC_HEATING_AS4, HVAC_COOLING_AS5, SUPPLY_HEATING_AS7, SUPPLY_COOLING_AS1 for heat pump operation in experiment {}.'.format(i))
+        else:
+            print(' - Experiment {} continues to use district heating with reqd minisplit cooling.'.format(i))
+
+        # NEW BUILD REQ MASS TIMBER
+        if keys[5] == 1:
+            # in new buildings set type_cons = CONSTRUCTION_AS2
+            # COMPUTE EMBODIED CARBON
+            print(' - Setting type_cons to CONSTRUCTION_AS2 in experiment {}.'.format(i))
+        else:
+            print(' - Experiment {} continues to use cement-based CONSTRUCTION_AS3 structure.'.format(i))
+
+        # SEAWATER COOLING LOOP
+        if keys[6] == 1:
+            # in all buildings set HVAC_HEATING_AS4, HVAC_COOLING_AS5, SUPPLY_HEATING_AS7, SUPPLY_COOLING_AS3
+            print(' - Aligning HVAC_COOLING_AS5, SUPPLY_COOLING_AS3 for heatpump/seawater operation in experiment {}.'.format(i))
+        else:
+            print(' - Experiment {} continues to use district heating with reqd minisplit cooling.'.format(i))
+
+        # ROOFTOP PV
+        if keys[7] == 1:
+
+            config.bigmacc.rooftop = 'true'
+            # check for green roof
+            if keys[1] == 1:
+                # in all buildings set roof_type to PV+green roof
+                print(' - Setting roof_type for PV+green roof for experiment {}.'.format(i))
+                config.bigmacc.heatgain = 0.4
+                print(' - Reducing rooftop sensible heat gain by 40% for experiment {}.'.format(i))
+
+                # perma set config.bigmacc.heatgain = 0.4
+            else:
+                # in all buildings set roof_type to PV roof
+                print(' - Setting roof_type for PV+standard roof for experiment {}.'.format(i))
+                # perma set config.bigmacc.heatgain = 0.1
+                config.bigmacc.heatgain = 0.1
+                print(' - Reducing rooftop sensible heat gain by 10% for experiment {}.'.format(i))
+
+        else:
+            print(' - Experiment {} does not have rooftop solar.'.format(i))
 
 
+def main(config):
+    locator = cea.inputlocator.InputLocator(config.scenario)
 
+
+    # alt_use_type_properties = locator.get_alt_use_type_properties()
+    # cea.bigmacc.utils.copy_results(alt_use_type_properties, locator.get_database_use_types_properties())
 
     # print(locator.get_demand_results_folder())
     # print(config.bigmacc.keys)

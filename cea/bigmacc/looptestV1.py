@@ -95,7 +95,7 @@ def main(config):
             pass
 
         ## SIMULATIONS ---
-        if bigmacc_util.parsecommands(commandpath, 'run_radiation') == 'True':
+        if config.bigmacc.commandpath == True:
             print(' - Running radiation simulation for experiment {}.'.format(i))
             try:
                 cea.resources.radiation_daysim.radiation_main.main(config)
@@ -120,6 +120,9 @@ def main(config):
         except:
             pass
 
+
+        ## RESET FILES FOR NEXT ---
+        cea.utilities.data_initializer.main(config)
         print('END: experiment {}. \n'.format(i))
 
 

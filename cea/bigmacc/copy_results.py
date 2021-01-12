@@ -18,6 +18,7 @@ __maintainer__ = ""
 __email__ = ""
 __status__ = ""
 
+
 def copy_results(locator, destination):
     """
     Copy the results from the scenario folder to the experiment's folder.
@@ -29,9 +30,7 @@ def copy_results(locator, destination):
     import distutils
     from distutils import dir_util
 
-    # assert os.path.exists(destination), "Could not find new destination: {destination}".format(
-    #     destination=destination
-    # )
+
     distutils.dir_util.copy_tree(locator, destination)
 
 
