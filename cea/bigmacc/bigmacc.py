@@ -74,6 +74,11 @@ def run_bigmacc_rules(config, locator):
         # WALL AND WINDOW RETROFIT
         if keys[2] == 1:
             # in existing buildings set type_win, type_leak, type_wall = high_performance options
+            typ_path = locator.get_building_typology()
+            typ = cea.utilities.dbf.dbf_to_dataframe(typ_path)
+            typ_exist = typ[typ['REFERENCE']=='existing']['Name'].values.tolist()
+
+            #need to map based on the typ_exist list
             arch_path = locator.get_building_architecture()
             arch = cea.utilities.dbf.dbf_to_dataframe(arch_path)
             arch['type_win'] = 'WINDOW_AS6' #triple glazing low-e two way
@@ -92,6 +97,16 @@ def run_bigmacc_rules(config, locator):
         # NEW BUILD REQ PASSIVE
         if keys[3] == 1:
             print(' - Setting all new construction to passive house standard for experiment {}.'.format(i))
+            # check for green roof
+            if keys[1] == 1:
+                # in all buildings set roof_type to PV+green roof
+                print(' - Setting roof_type for passive+green roof for experiment {}.'.format(i))
+                config.bigmacc.heatgain = 0.4
+                print(' - Reducing rooftop sensible heat gain by 40% for experiment {}.'.format(i))
+
+                # perma set config.bigmacc.heatgain = 0.4
+            else:
+                print(' - Regular passive house type roof used for experiment {}.'.format(i))
         else:
             print(' - Experiment {} does not require new construction to be passive house.'.format(i))
 
@@ -119,29 +134,33 @@ def run_bigmacc_rules(config, locator):
 
         # ROOFTOP PV
         if keys[7] == 1:
-
-            config.bigmacc.rooftop = 'true'
-            # check for green roof
-            if keys[1] == 1:
-                # in all buildings set roof_type to PV+green roof
-                print(' - Setting roof_type for PV+green roof for experiment {}.'.format(i))
-                config.bigmacc.heatgain = 0.4
-                print(' - Reducing rooftop sensible heat gain by 40% for experiment {}.'.format(i))
-
-                # perma set config.bigmacc.heatgain = 0.4
+            #check for passive house
+            if keys[3] == 1:
+                #check for green roof
+                if keys[1] == 1: #PV+GR+PH
+                    print(' - Setting roof_type and solar heat gain coefficient for PV+green+passive house roof for experiment {}.'.format(i))
+                    config.bigmacc.heatgain = 0.6
+                else: #PV+PH
+                    print(' - Setting roof_type and solar heat gain coefficient for PV+passive house roof for experiment {}.'.format(i))
+                    config.bigmacc.heatgain = 0.25
             else:
-                # in all buildings set roof_type to PV roof
-                print(' - Setting roof_type for PV+standard roof for experiment {}.'.format(i))
-                # perma set config.bigmacc.heatgain = 0.1
-                config.bigmacc.heatgain = 0.1
-                print(' - Reducing rooftop sensible heat gain by 10% for experiment {}.'.format(i))
-
+                # check for green roof
+                if keys[1] == 1: #PV+GR+ST
+                    print(' - Setting roof_type and solar heat gain coefficient for PV+green+standard roof for experiment {}.'.format(i))
+                    config.bigmacc.heatgain = 0.4
+                else: #PV+ST
+                    print(' - Setting roof_type and solar heat gain coefficient for PV+standard roof for experiment {}.'.format(i))
+                    config.bigmacc.heatgain = 0.1
         else:
             print(' - Experiment {} does not have rooftop solar.'.format(i))
+            config.bigmacc.heatgain = 0.0
+
 
 
 def main(config):
     locator = cea.inputlocator.InputLocator(config.scenario)
+
+
 
 
     # alt_use_type_properties = locator.get_alt_use_type_properties()
