@@ -89,6 +89,7 @@ Demand forecasting:
                  'general:multiprocessing',
                  'general:number-of-cpus-to-keep-free',
                  'general:debug',
+                 'bigmacc:heatgain',
                  demand]
     input-files:
       - [get_weather_file]
@@ -474,7 +475,9 @@ BIGMACC:
     module: cea.bigmacc.bigmacc
     parameters: [ 'general:scenario',
                   'bigmacc:keys',
-                  archetypes-mapper]
+                  'bigmacc:rooftop',
+                  'bigmacc:rooftop']
+#                  archetypes-mapper]
     input-files:
       - [ get_zone_geometry ]
       - [ get_building_typology ]

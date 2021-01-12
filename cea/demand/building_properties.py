@@ -8,6 +8,7 @@ from geopandas import GeoDataFrame as Gdf
 from datetime import datetime
 from collections import namedtuple
 from cea.demand import constants
+import cea.config
 from cea.utilities.dbf import dbf_to_dataframe
 from cea.technologies import blinds
 from typing import List
@@ -980,6 +981,10 @@ def calc_Isol_daysim(building_name, locator, prop_envelope, prop_rc_model, therm
                  prop_envelope.loc[building_name, 'a_roof'] * \
                  thermal_resistance_surface * \
                  prop_rc_model.loc[building_name, 'U_roof']
+
+    config = cea.config.Configuration()
+    I_sol_roof = I_sol_roof * (1 - config.bigmacc.heatgain)
+
 
     # sum window, considering shading
     I_sol_win = (radiation_data['windows_east_kW'] +
