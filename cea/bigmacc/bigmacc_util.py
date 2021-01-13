@@ -6,7 +6,7 @@ import os
 import cea.config
 import cea.inputlocator
 import cea.demand.demand_main
-import cea.resources.radiation_daysim.radiation_main
+# import cea.resources.radiation_daysim.radiation_main
 import cea.bigmacc.copy_results
 import cea.datamanagement.archetypes_mapper
 import configparser
@@ -40,4 +40,6 @@ def change_key(key):
     s[6] = '0'
     return "".join(s)
 
-
+def print_test(item):
+    print(item)
+    return item

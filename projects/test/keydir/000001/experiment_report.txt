@@ -1,5 +1,0 @@
-Experiment Report
-typology = baseline
-zone = baseline
-weather = yvr_ubc_uwg_2016
-

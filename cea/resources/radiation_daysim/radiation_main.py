@@ -2,9 +2,6 @@
 Radiation engine and geometry handler for CEA
 """
 
-
-
-
 import os
 import shutil
 import sys

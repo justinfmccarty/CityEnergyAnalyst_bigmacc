@@ -1,5 +1,0 @@
-Experiment Report
-typology = baseline
-zone = baseline
-weather = vancouver_harbour_2016
-
