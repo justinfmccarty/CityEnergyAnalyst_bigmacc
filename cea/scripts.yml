@@ -476,7 +476,9 @@ BIGMACC:
     parameters: [ 'general:scenario',
                   'bigmacc:keys',
                   'bigmacc:rooftop',
-                  'bigmacc:commandpath',]
+                  'bigmacc:commandpath',
+                  'bigmacc:heatgain',
+                  'bigmacc:key']
 #                  archetypes-mapper]
     input-files:
       - [ get_zone_geometry ]
@@ -496,7 +498,10 @@ BIGMACC:
                   'general:scenario',
                   weather-helper,
                   archetypes-mapper,
-                  'bigmacc:keys']
+                  'bigmacc:keys',
+                  'bigmacc:key',
+                  'bigmacc:runradiation',
+                  'bigmacc:strategies']
     input-files:
       - [ get_zone_geometry ]
       - [ get_building_typology ]
