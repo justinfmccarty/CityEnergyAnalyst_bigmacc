@@ -181,7 +181,7 @@ def rule_dataframe(key_list,run_rad):
     key_df['PH_wwr'] = key_df.apply(lambda x: PH_rule(x['keys'], 0.15), axis=1)
     key_df['PH_part'] = key_df.apply(lambda x: PH_rule(x['keys'], 'WALL_AS19'), axis=1)
 
-    key_df['HP_hvac_cs'] = key_df.apply(lambda x: HP_rule(x['keys'], 'HVAC_COOLING_AS5'), axis=1)
+    key_df['HP_hvac_cs'] = key_df.apply(lambda x: HP_rule(x['keys'], 'HVAC_COOLING_AS1'), axis=1)
     key_df['HP_hvac_hs'] = key_df.apply(lambda x: HP_rule(x['keys'], 'HVAC_HEATING_AS4'), axis=1)
     key_df['HP_supply_cs'] = key_df.apply(lambda x: HP_rule(x['keys'], 'SUPPLY_COOLING_AS1'), axis=1)
     key_df['HP_supply_hs'] = key_df.apply(lambda x: HP_rule(x['keys'], 'SUPPLY_HEATING_AS7'), axis=1)
@@ -189,7 +189,7 @@ def rule_dataframe(key_list,run_rad):
 
     key_df['MT_cons'] = key_df.apply(lambda x: MT_rule(x['keys'], 'CONSTRUCTION_AS2'), axis=1)
 
-    key_df['SW_hvac_cs'] = key_df.apply(lambda x: SW_rule(x['keys'], 'HVAC_COOLING_AS5'), axis=1)
+    key_df['SW_hvac_cs'] = key_df.apply(lambda x: SW_rule(x['keys'], 'HVAC_COOLING_AS1'), axis=1)
     key_df['SW_supply_cs'] = key_df.apply(lambda x: SW_rule(x['keys'], 'SUPPLY_COOLING_AS3'), axis=1)
 
     key_df['PV_GR_PH'] = key_df.apply(lambda x: PV_GR_PH_rule(x['keys'], 'ROOF_AS19'), axis=1)
