@@ -1019,7 +1019,7 @@ class InputLocator(object):
 
     # BIGMACC
     def get_data_results_folder(self):
-        """scenario/outputs/data/demand"""
+        """scenario/outputs/data"""
         return self._ensure_folder(self.scenario, 'outputs', 'data')
 
     def get_project_temp_folder(self):

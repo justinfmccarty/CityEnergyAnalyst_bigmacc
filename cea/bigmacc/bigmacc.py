@@ -1,7 +1,5 @@
 """
-This is a template script - an example of how a CEA script should be set up.
-
-NOTE: ADD YOUR SCRIPT'S DOCUMENTATION HERE (what, why, include literature references)
+The BIGMACC script.
 """
 
 
@@ -13,8 +11,10 @@ import cea.demand.demand_main
 import cea.resources.radiation_daysim.radiation_main
 import cea.bigmacc.copy_results
 import cea.datamanagement.archetypes_mapper
-import cea.bigmacc.bigmacc_util as bigmacc_util
-
+import cea.bigmacc.bigmacc_util as util
+import distutils
+from distutils import dir_util
+import shutil
 
 __author__ = "Justin McCarty"
 __copyright__ = ""
@@ -25,12 +25,6 @@ __maintainer__ = ""
 __email__ = ""
 __status__ = ""
 
-
-#
-# def run(config, locator):
-#     print(5)
-#     print(config.scenario)
-#     print(locator.get_building_geometry_folder())
 
 def main(config):
     """
@@ -48,52 +42,15 @@ def main(config):
 
     ## SCENARIO SETUP ---
     key_list = util.generate_key_list(config.bigmacc.strategies)
-    
 
-    # identify key variables or paths
-    key_directory = config.bigmacc.keys
-    keylist = [dI for dI in os.listdir(key_directory) if os.path.isdir(os.path.join(key_directory, dI))]
-
-    keylist = keylist[:3] # temporary subset for debugging
-
-
-
-
-    for i in keylist:
+    for i in key_list:
         print('START: experiment {}.'.format(i))
         cea.config.key = i
 
 
-
-
-
-
-        # load in the new weather file
-        print(' - Transferring weather file for experiment {}.'.format(i))
-        weatherpath = os.path.join(config.bigmacc.keys, '{}'.format(i), 'weather')
-        try:
-            cea.bigmacc.copy_results.main(weatherpath, locator.get_weather_folder())
-        except:
-            pass
-
-        # load in the new typology file
-        print(' - Transferring typology file for experiment {}.'.format(i))
-        typologypath = os.path.join(config.bigmacc.keys, '{}'.format(i), 'typology')
-        try:
-            cea.bigmacc.copy_results.main(locator.get_building_properties_folder(), typologypath)
-        except:
-            pass
-
-        # load in the new zone file
-        print(' - Transferring zone file for experiment {}.'.format(i))
-        zonepath = os.path.join(config.bigmacc.keys, '{}'.format(i), 'zone')
-        try:
-            cea.bigmacc.copy_results.main(zonepath, locator.get_building_geometry_folder())
-        except:
-            pass
-
+        os.mkdir(os.path.join(config.general.project, i))
         # run the archetype mapper to leverage the newly loaded typology file and set parameters
-        print(' - Running archetype mapper for experiment {}.'.format(i))
+        print(' - Running archetype mapper for experiment {} to remove changes made in the last experiment.'.format(i))
         try:
             cea.datamanagement.archetypes_mapper.main(config)
         except:
@@ -114,6 +71,8 @@ def main(config):
             except:
                 pass
         else:
+            radfiles = cea.bigmacc.copyrad
+            distutils.dir_util.copy_tree(radfiles, locator.get_solar_radiation_folder())
             print(' - Experiment {} does not require new radiation simulation.'.format(i))
 
         print(' - Running demand simulation for experiment {}.'.format(i))
@@ -124,17 +83,25 @@ def main(config):
 
         ## STORE RESULT ---
 
-        # clone out the simulation results directory
+        # clone out the simulation inputs and outputs directory
         print(' - Transferring results directory for experiment {}.'.format(i))
-        resultspath = os.path.join(config.bigmacc.keys, '{}'.format(i), 'results')
+
+        inputs_path = os.path.join(config.general.project, i,'inputs')
+        outputs_path = os.path.join(config.general.project, i,'outputs','data')
+
         try:
-            cea.bigmacc.copy_results.main(locator.get_data_results_folder(), resultspath)
+            distutils.dir_util.copy_tree(locator.get_data_results_folder(), outputs_path)
+            distutils.dir_util.copy_tree(locator.get_input_folder(), inputs_path)
         except:
             pass
 
 
         ## RESET FILES FOR NEXT ---
         cea.utilities.data_initializer.main(config)
+
+        # delete results
+        shutil.rmtree(locator.get_data_results_folder())
+
         print('END: experiment {}. \n'.format(i))
 
 

@@ -476,9 +476,11 @@ BIGMACC:
     parameters: [ 'general:scenario',
                   'bigmacc:keys',
                   'bigmacc:rooftop',
-                  'bigmacc:commandpath',
+                  'bigmacc:runrad',
+                  'bigmacc:copyrad',
                   'bigmacc:heatgain',
-                  'bigmacc:key']
+                  'bigmacc:key',
+                  'bigmac:strategies']
 #                  archetypes-mapper]
     input-files:
       - [ get_zone_geometry ]
@@ -489,7 +491,7 @@ BIGMACC:
     description: the base for the eta lab workflow
     interfaces: [cli, dashboard]
     module: cea.bigmacc.looptestV1
-    parameters: [ 'general:scenario',
+    parameters: [ 'general:project',
                   'general:multiprocessing',
                   'general:number-of-cpus-to-keep-free',
                   'general:debug',
@@ -501,6 +503,8 @@ BIGMACC:
                   'bigmacc:keys',
                   'bigmacc:key',
                   'bigmacc:runradiation',
+                  'bigmacc:copyrad',
+                  'bigmacc:runrad',
                   'bigmacc:strategies']
     input-files:
       - [ get_zone_geometry ]

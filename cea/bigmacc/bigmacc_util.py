@@ -2,8 +2,6 @@
 General utilities for the bigmacc project.
 """
 
-
-
 import os
 import cea.config
 import cea.inputlocator
@@ -32,3 +30,14 @@ def generate_key_list(n):
         result = ''.join(str(i) for i in key)
         key_list.append(result)
     return key_list
+
+
+def change_key(key):
+    s = list(key)
+    s[0] = '0'
+    s[4] = '0'
+    s[5] = '0'
+    s[6] = '0'
+    return "".join(s)
+
+

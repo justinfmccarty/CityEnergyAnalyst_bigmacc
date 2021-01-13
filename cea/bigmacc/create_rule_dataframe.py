@@ -11,6 +11,7 @@ import numpy as np
 import itertools
 import cea.bigmacc.bigmacc_util as util
 
+
 __author__ = "Justin McCarty"
 __copyright__ = ""
 __credits__ = ["Justin McCarty"]
@@ -27,6 +28,14 @@ def runrad_rule(key, run_list):  # SETS FOR HEATING REDUCED 1C (20C TO 19C) AND 
     else:
         return False
 
+def copy_key(key, run_list):
+    config = cea.config.Configuration()
+    if key in run_list:
+        return os.path.join(config.general.project, key, 'outputs', 'data', 'solar-radiation')
+    elif util.change_key(key) in run_list:
+        return os.path.join(config.general.project, util.change_key(key), 'outputs', 'data', 'solar-radiation')
+    else:
+        returnos.path.join(config.general.project, key, 'outputs', 'data', 'solar-radiation')
 
 def SP_rule(key, SP_value):  # SET INTEGER FOR HEATING AND COOLING SETPOINT
     keys = [int(d) for d in key]
@@ -188,9 +197,14 @@ def rule_dataframe(key_list,run_rad):
     key_df['PV_GR'] = key_df.apply(lambda x: PV_GR_rule(x['keys'], 'ROOF_AS20'), axis=1)
     key_df['PV'] = key_df.apply(lambda x: PV_rule(x['keys'], 'ROOF_AS22'), axis=1)
 
-    key_df['run_rad'] = key_df.apply(lambda x: runrad_rule(x['keys'], run_rad), axis=1)
-    return key_df
+    key_df['PV_GR_PH_hg'] = key_df.apply(lambda x: PV_GR_PH_rule(x['keys'], 0.6), axis=1)
+    key_df['PV_PH_hg'] = key_df.apply(lambda x: PV_PH_rule(x['keys'], 0.25), axis=1)
+    key_df['PV_GR_hg'] = key_df.apply(lambda x: PV_GR_rule(x['keys'], 0.4), axis=1)
+    key_df['PV_hg'] = key_df.apply(lambda x: PV_rule(x['keys'], 0.1), axis=1)
 
+    key_df['run_rad'] = key_df.apply(lambda x: runrad_rule(x['keys'], run_rad), axis=1)
+    key_df['copy_rad'] = key_df.apply(lambda x: copy_key(x['keys'],run_rad),axis=1)
+    return key_df
 
 def main(config):
     key_list = util.generate_key_list(config.bigmacc.strategies)

@@ -17,6 +17,9 @@ import cea.bigmacc.bigmacc_util as bigmacc_util
 import cea.bigmacc.create_rule_dataframe as createdf
 import numpy as np
 import itertools
+import distutils
+from distutils import dir_util
+import shutil
 
 __author__ = "Justin McCarty"
 __copyright__ = ""
@@ -36,9 +39,19 @@ def order_key_list(run_list,key_list):
   final_list.extend(no_run_rad_list)
   return final_list
 
+def run(config):
+    locator = cea.inputlocator.InputLocator(config.scenario)
+    i = 'testnite'
+
+    inputs_path = os.path.join(config.general.project, i, 'inputs')
+    outputs_path = os.path.join(config.general.project, i, 'outputs')
+
+    distutils.dir_util.copy_tree(locator.get_data_results_folder(), outputs_path)
+    distutils.dir_util.copy_tree(locator.get_input_folder(), inputs_path)
+
+
 def main(config):
-    llist = order_key_list(config.bigmacc.runradiation, generate_key_list(config.bigmacc.strategies))
-    print(llist[0:16])
+    run(config)
 
 
 if __name__ == '__main__':
