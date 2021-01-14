@@ -49,7 +49,7 @@ def lca_embodied(year_to_calculate, locator):
     - zone.shp: shapefile with the geometry of each building in the zone of study
         locator.get_zone_geometry()
     - Archetypes_properties: csv file with the database of archetypes including embodied energy and emissions
-        locator.get_database_construction_standards()
+        locator.l()
 
     As a result, the following file is created:
 
@@ -101,6 +101,8 @@ def lca_embodied(year_to_calculate, locator):
     # local variables
     age_df = dbf_to_dataframe(locator.get_building_typology())
     architecture_df = dbf_to_dataframe(locator.get_building_architecture())
+    hvac_df = dbf_to_dataframe(locator.get_building_supply())
+    supply_df = dbf_to_dataframe(locator.get_building_air_conditioning())
     geometry_df = Gdf.from_file(locator.get_zone_geometry())
     geometry_df['footprint'] = geometry_df.area
     geometry_df['perimeter'] = geometry_df.length
@@ -112,7 +114,20 @@ def lca_embodied(year_to_calculate, locator):
     surface_database_walls = pd.read_excel(locator.get_database_envelope_systems(), "WALL")
     surface_database_floors = pd.read_excel(locator.get_database_envelope_systems(), "FLOOR")
 
-    # querry data
+    # added for bigmacc
+    surface_database_cons = pd.read_excel(locator.get_database_envelope_systems(), "CONSTRUCTION")
+    surface_database_leak = pd.read_excel(locator.get_database_envelope_systems(), "LEAKAGE")
+
+    hvac_database_cooling = pd.read_excel(locator.get_database_air_conditioning_systems(), "COOLING")
+    hvac_database_heating = pd.read_excel(locator.get_database_air_conditioning_systems(), "HEATING")
+    hvac_database_vent = pd.read_excel(locator.get_database_air_conditioning_systems(), "VENTILATION")
+    supply_database_cooling = pd.read_excel(locator.get_database_supply_assemblies(), "COOLING")
+    supply_database_heating = pd.read_excel(locator.get_database_supply_assemblies(), "HEATING")
+    supply_database_dhw = pd.read_excel(locator.get_database_supply_assemblies(), "HOT_WATER")
+
+
+
+    # query data
     df = architecture_df.merge(surface_database_windows, left_on='type_win', right_on='code')
     df2 = architecture_df.merge(surface_database_roof, left_on='type_roof', right_on='code')
     df3 = architecture_df.merge(surface_database_walls, left_on='type_wall', right_on='code')
@@ -121,20 +136,51 @@ def lca_embodied(year_to_calculate, locator):
     df5.rename({'GHG_FLOOR_kgCO2m2': 'GHG_BASE_kgCO2m2'}, inplace=True, axis=1)
     df6 = architecture_df.merge(surface_database_walls, left_on='type_part', right_on='code')
     df6.rename({'GHG_WALL_kgCO2m2': 'GHG_PART_kgCO2m2'}, inplace=True, axis=1)
+
+    # added for bigmacc
+    df7 = architecture_df.merge(surface_database_cons, left_on='type_cons', right_on='code')
+    df8 = architecture_df.merge(surface_database_leak, left_on='type_leak', right_on='code')
+    df9 = hvac_df.merge(hvac_database_cooling, left_on='type_cs', right_on='code')
+    df10 = hvac_df.merge(hvac_database_heating, left_on='type_hs', right_on='code')
+    df11 = supply_df.merge(supply_database_cooling, left_on='type_cs', right_on='code')
+    df12 = supply_df.merge(supply_database_heating, left_on='type_hs', right_on='code')
+    df13 = supply_df.merge(supply_database_dhw, left_on='type_dhw', right_on='code')
+    df14 = supply_df.merge(hvac_database_vent, left_on='type_vent', right_on='code')
+
+
     fields = ['Name', "GHG_WIN_kgCO2m2"]
     fields2 = ['Name', "GHG_ROOF_kgCO2m2"]
     fields3 = ['Name', "GHG_WALL_kgCO2m2"]
     fields4 = ['Name', "GHG_FLOOR_kgCO2m2"]
     fields5 = ['Name', "GHG_BASE_kgCO2m2"]
     fields6 = ['Name', "GHG_PART_kgCO2m2"]
+
+    # added for bigmacc
+    fields7 = ['Name', "GHG_CONS_kgCO2m2"]
+    fields8 = ['Name', "GHG_LEAK_kgCO2m2"]
+    fields9 = ['Name', "GHG_hvacCS_kgCO2m2"]
+    fields10 = ['Name', "GHG_hvacHS_kgCO2m2"]
+    fields11 = ['Name', "GHG_supplyCS_kgCO2m2"]
+    fields12 = ['Name', "GHG_supplyHS_kgCO2m2"]
+    fields13 = ['Name', "GHG_supplyDHW_kgCO2m2"]
+    fields14 = ['Name', "GHG_hvacVENT_kgCO2m2"]
+
     surface_properties = df[fields].merge(df2[fields2],
-                                          on='Name').merge(df3[fields3],
-                                          on='Name').merge(df4[fields4],
-                                          on='Name').merge(df5[fields5],
-                                          on='Name').merge(df6[fields6], on='Name')
+                                                    on='Name').merge(df3[fields3],
+                                                    on='Name').merge(df4[fields4],
+                                                    on='Name').merge(df5[fields5],
+                                                    on='Name').merge(df6[fields6],
+                                                    on='Name').merge(df7[fields7],
+                                                    on='Name').merge(df8[fields8],
+                                                    on='Name').merge(df9[fields9],
+                                                    on='Name').merge(df10[fields10],
+                                                    on='Name').merge(df11[fields11],
+                                                    on='Name').merge(df12[fields12],
+                                                    on='Name').merge(df13[fields13],
+                                                    on='Name').merge(df14[fields14], on='Name')
 
     # DataFrame with joined data for all categories
-    data_meged_df = geometry_df.merge(age_df, on='Name').merge(surface_properties, on='Name').merge(architecture_df, on='Name')
+    data_meged_df = geometry_df.merge(age_df, on='Name').merge(surface_properties, on='Name').merge(architecture_df, on='Name').merge(hvac_df, on='Name').merge(supply_df, on='Name')
 
     # calculate building geometry
     ## total window area
@@ -145,8 +191,7 @@ def lca_embodied(year_to_calculate, locator):
     data_meged_df['windows_ag'] = average_wwr * data_meged_df['perimeter'] * data_meged_df['height_ag']
 
     ## wall area above ground
-    data_meged_df['area_walls_ext_ag'] = data_meged_df['perimeter'] * data_meged_df['height_ag'] - data_meged_df[
-        'windows_ag']
+    data_meged_df['area_walls_ext_ag'] = data_meged_df['perimeter'] * data_meged_df['height_ag'] - data_meged_df['windows_ag']
 
     # fix according to the void deck
     data_meged_df['empty_envelope_ratio'] = 1 - (
@@ -211,6 +256,14 @@ def calculate_contributions(df, year_to_calculate):
     df[total_column] = ((df['GHG_WALL_kgCO2m2'] * (df['area_walls_ext_ag'] + df['area_walls_ext_bg']) +
                          df['GHG_WIN_kgCO2m2'] * df['windows_ag'] +
                          df['GHG_FLOOR_kgCO2m2'] * df['floor_area_ag'] +
+                         df['GHG_CONS_kgCO2m2'] * (df['floor_area_bg'] +df['floor_area_ag'])  +
+                         df['GHG_LEAK_kgCO2m2'] * (df['area_walls_ext_ag'] + df['area_walls_ext_bg']) +
+                         df['GHG_hvacCS_kgCO2m2'] * df['floor_area_ag'] +
+                         df['GHG_hvacHS_kgCO2m2'] * df['floor_area_ag'] +
+                         df['GHG_supplyCS_kgCO2m2'] * df['floor_area_ag'] +
+                         df['GHG_supplyHS_kgCO2m2'] * df['floor_area_ag'] +
+                         df['GHG_supplyDHW_kgCO2m2'] * df['floor_area_ag'] +
+                         df['GHG_hvacVENT_kgCO2m2'] * df['floor_area_ag'] +
                          df['GHG_BASE_kgCO2m2'] * df['floor_area_bg'] +
                          df['GHG_PART_kgCO2m2'] * (df['floor_area_ag']+df['floor_area_bg']) * CONVERSION_AREA_TO_FLOOR_AREA_RATIO +
                          df['GHG_ROOF_kgCO2m2'] * df['footprint']) / SERVICE_LIFE_OF_BUILDINGS) * df['confirm']
@@ -222,8 +275,8 @@ def calculate_contributions(df, year_to_calculate):
     df['GHG_sys_embodied_kgCO2m2'] = df[total_column] / df['GFA_m2']
 
     # the total and specific embodied energy/emissions are returned
-    result = df[['Name', 'GHG_sys_embodied_tonCO2', 'GHG_sys_embodied_kgCO2m2', 'GFA_m2']]
-
+    # result = df[['Name', 'GHG_sys_embodied_tonCO2', 'GHG_sys_embodied_kgCO2m2', 'GFA_m2']]
+    result = df
     return result
 
 
