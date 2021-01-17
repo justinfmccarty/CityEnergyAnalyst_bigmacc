@@ -9,6 +9,7 @@ import itertools
 import cea.config
 import cea.inputlocator
 
+from cea.analysis.lca.embodied import calc_if_existing
 import numpy as np
 from geopandas import GeoDataFrame as Gdf
 import pandas as pd
@@ -94,8 +95,8 @@ def building_capex(year_to_calculate, locator):
     # local variables
     age_df = dbf_to_dataframe(locator.get_building_typology())
     architecture_df = dbf_to_dataframe(locator.get_building_architecture())
-    hvac_df = dbf_to_dataframe(locator.get_building_supply())
-    supply_df = dbf_to_dataframe(locator.get_building_air_conditioning())
+    supply_df = dbf_to_dataframe(locator.get_building_supply())
+    hvac_df = dbf_to_dataframe(locator.get_building_air_conditioning())
     geometry_df = Gdf.from_file(locator.get_zone_geometry())
     geometry_df['footprint'] = geometry_df.area
     geometry_df['perimeter'] = geometry_df.length
@@ -107,7 +108,7 @@ def building_capex(year_to_calculate, locator):
     surface_database_walls = pd.read_excel(locator.get_database_envelope_systems(), "WALL")
     surface_database_floors = pd.read_excel(locator.get_database_envelope_systems(), "FLOOR")
     surface_database_cons = pd.read_excel(locator.get_database_envelope_systems(), "CONSTRUCTION")
-    surface_database_leak = pd.read_excel(locator.get_database_envelope_systems(), "LEAKAGE")
+    surface_database_leak = pd.read_excel(locator.get_database_envelope_systems(), "TIGHTNESS")
     hvac_database_cooling = pd.read_excel(locator.get_database_air_conditioning_systems(), "COOLING")
     hvac_database_heating = pd.read_excel(locator.get_database_air_conditioning_systems(), "HEATING")
     hvac_database_vent = pd.read_excel(locator.get_database_air_conditioning_systems(), "VENTILATION")
@@ -127,7 +128,7 @@ def building_capex(year_to_calculate, locator):
     df8 = architecture_df.merge(surface_database_leak, left_on='type_leak', right_on='code')
     df9 = hvac_df.merge(hvac_database_cooling, left_on='type_cs', right_on='code')
     df10 = hvac_df.merge(hvac_database_heating, left_on='type_hs', right_on='code')
-    df14 = supply_df.merge(hvac_database_vent, left_on='type_vent', right_on='code')
+    df14 = hvac_df.merge(hvac_database_vent, left_on='type_vent', right_on='code')
 
     fields = ['Name', "capex_WIN"]
     fields2 = ['Name', "capex_ROOF"]
@@ -155,7 +156,7 @@ def building_capex(year_to_calculate, locator):
                                                     on='Name').merge(df14[fields14], on='Name')
 
     # DataFrame with joined data for all categories
-    data_meged_df = geometry_df.merge(age_df, on='Name').merge(surface_properties, on='Name').merge(architecture_df, on='Name').merge(hvac_df, on='Name').merge(supply_df, on='Name')
+    data_meged_df = geometry_df.merge(age_df, on='Name').merge(surface_properties, on='Name').merge(architecture_df, on='Name').merge(hvac_df, on='Name')
 
     # calculate building geometry
     ## total window area
@@ -224,9 +225,10 @@ def calculate_contributions(df, year_to_calculate):
     total_column = 'saver'
     ## calculate how many years before the calculation year the building was built in
     df['delta_year'] = year_to_calculate - df['YEAR']
-    ## if it was built more than 60 years before, the embodied energy/emissions have been "paid off" and are set to 0
+
+    ## if it was built more than X years before, the embodied energy/emissions have been "paid off" and are set to 0
     df['confirm'] = df.apply(lambda x: calc_if_existing(x['delta_year'], SERVICE_LIFE_OF_BUILDINGS), axis=1)
-    ## if it was built less than 60 years before, the contribution from each building component is calculated
+    ## if it was built less than X years before, the contribution from each building component is calculated
     df[total_column] = ((df['capex_WALL'] * (df['area_walls_ext_ag'] + df['area_walls_ext_bg']) +
                          df['capex_WIN'] * df['windows_ag'] +
                          df['capex_FLOOR'] * df['floor_area_ag'] +
@@ -249,8 +251,8 @@ def calculate_contributions(df, year_to_calculate):
 
     df['capex_building_systems'] = df[total_column]
     df['opex_building_systems'] = df['capex_building_systems'] * (.05)
-    df['capex_ann_building_systems'] = df['capex_building_systems'].apply(lambda x: calc_capex_annualized(x, 5, 30),axis=1)
-    df['opex_ann_building_systems'] = df['opex_building_systems'].apply(lambda x: calc_opex_annualized(x, 5, 30),axis=1)
+    df['capex_ann_building_systems'] = df.apply(lambda x: calc_capex_annualized(x['capex_building_systems'], 5, 30),axis=1)
+    df['opex_ann_building_systems'] = df.apply(lambda x: calc_opex_annualized(x['opex_building_systems'], 5, 30),axis=1)
     df['TAC_building_systems'] = df['capex_ann_building_systems'] + df['opex_ann_building_systems']
 
     return df

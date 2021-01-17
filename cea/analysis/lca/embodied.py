@@ -101,8 +101,8 @@ def lca_embodied(year_to_calculate, locator):
     # local variables
     age_df = dbf_to_dataframe(locator.get_building_typology())
     architecture_df = dbf_to_dataframe(locator.get_building_architecture())
-    hvac_df = dbf_to_dataframe(locator.get_building_supply())
-    supply_df = dbf_to_dataframe(locator.get_building_air_conditioning())
+    supply_df = dbf_to_dataframe(locator.get_building_supply())
+    hvac_df = dbf_to_dataframe(locator.get_building_air_conditioning())
     geometry_df = Gdf.from_file(locator.get_zone_geometry())
     geometry_df['footprint'] = geometry_df.area
     geometry_df['perimeter'] = geometry_df.length
@@ -116,7 +116,7 @@ def lca_embodied(year_to_calculate, locator):
 
     # added for bigmacc
     surface_database_cons = pd.read_excel(locator.get_database_envelope_systems(), "CONSTRUCTION")
-    surface_database_leak = pd.read_excel(locator.get_database_envelope_systems(), "LEAKAGE")
+    surface_database_leak = pd.read_excel(locator.get_database_envelope_systems(), "TIGHTNESS")
 
     hvac_database_cooling = pd.read_excel(locator.get_database_air_conditioning_systems(), "COOLING")
     hvac_database_heating = pd.read_excel(locator.get_database_air_conditioning_systems(), "HEATING")
@@ -145,7 +145,7 @@ def lca_embodied(year_to_calculate, locator):
     df11 = supply_df.merge(supply_database_cooling, left_on='type_cs', right_on='code')
     df12 = supply_df.merge(supply_database_heating, left_on='type_hs', right_on='code')
     df13 = supply_df.merge(supply_database_dhw, left_on='type_dhw', right_on='code')
-    df14 = supply_df.merge(hvac_database_vent, left_on='type_vent', right_on='code')
+    df14 = hvac_df.merge(hvac_database_vent, left_on='type_vent', right_on='code')
 
 
     fields = ['Name', "GHG_WIN_kgCO2m2"]
@@ -178,6 +178,7 @@ def lca_embodied(year_to_calculate, locator):
                                                     on='Name').merge(df12[fields12],
                                                     on='Name').merge(df13[fields13],
                                                     on='Name').merge(df14[fields14], on='Name')
+
 
     # DataFrame with joined data for all categories
     data_meged_df = geometry_df.merge(age_df, on='Name').merge(surface_properties, on='Name').merge(architecture_df, on='Name').merge(hvac_df, on='Name').merge(supply_df, on='Name')

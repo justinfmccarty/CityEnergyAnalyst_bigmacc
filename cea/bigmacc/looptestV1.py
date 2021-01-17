@@ -7,7 +7,12 @@ NOTE: ADD YOUR SCRIPT'S DOCUMENTATION HERE (what, why, include literature refere
 # import cea.bigmacc.bigmacc_util as util
 import cea.resources.radiation_daysim.radiation_main
 import os
+import time
+import cea.inputlocator
 import cea.config
+import distutils
+from distutils import dir_util
+import pandas as pd
 # import cea.inputlocator
 # import cea.demand.demand_main
 # import cea.resources.radiation_daysim.radiation_main
@@ -41,41 +46,44 @@ def set(config):
     print(config.bigmacc.copyrad)
 
 def pr(config):
-    # print(2)
-    # print(config.bigmacc.copyrad)
-    print(config.general.scenario)
-    print(os.path.join(config.bigmacc.keys, "0010011.zip"))
+    util.make_archive(os.path.join(config.general.scenario),
+                      os.path.join(config.bigmacc.keys,  "01.zip"))
+    util.un_zip(os.path.join(config.bigmacc.keys, '01'))
+
+def copy(config):
+    locator = cea.inputlocator.InputLocator(config.scenario)
+
+    inputs_path = os.path.join(config.bigmacc.keys, '02', 'inputs')
+    outputs_path = os.path.join(config.bigmacc.keys, '02', 'outputs', 'data')
+
+    distutils.dir_util.copy_tree(locator.get_data_results_folder(), outputs_path)
+    distutils.dir_util.copy_tree(locator.get_input_folder(), inputs_path)
+
+def log(config):
+    key_list = util.generate_key_list(config.bigmacc.strategies)
+
+    initialdf = pd.DataFrame(columns=['Experiments','Completed','Experiment Time','Unique Radiation'])
+    initialdf.to_csv(os.path.join(config.bigmacc.keys, 'logger.csv'))
+
+    time_elapsed = time.perf_counter() - 1
+    key_list = [0,1,2,3,4,5]
+    for i in key_list:
+        log_df = pd.read_csv(os.path.join(config.bigmacc.keys, 'logger.csv'),
+                             index_col='Unnamed: 0')
+        log_df = log_df.append(pd.DataFrame({'Experiments': 'exp_{}'.format(i),
+                                             'Completed': 'True',
+                                             'Experiment Time': '%d.2 seconds' % time_elapsed,
+                                             'Unique Radiation': config.bigmacc.runrad}, index=[0]), ignore_index=True)
+    log_df.to_csv(os.path.join(config.bigmacc.keys, 'logger.csv'))
+
 
 def main(config):
     # set(config)
-    pr(config)
+    t0 = time.perf_counter()
+    log(config)
+    time_elapsed = time.perf_counter() - t0
+    print('done - time elapsed: %d.2 seconds' % time_elapsed)
 
 
 if __name__ == '__main__':
     main(cea.config.Configuration())
-
-
-    # project = r"C:\Users\justi\Documents\project"
-    # destination = r"C:\Users\justi\Desktop\project"
-    # parent = "parent"
-    # scenario = "initial"
-    # key = "key"
-    #
-    # # os.mkdir(os.path.join(destination,parent,scenario))
-    #
-    # zip_loc = os.path.join(project, parent, scenario)
-    #
-    # zip_dest = os.path.join(destination, parent)
-    #
-    # # root_loc = os.path.join()
-    #
-    # make_archive(zip_loc, os.path.join(zip_dest, key+".zip"))
-    # un_zip(os.path.join(zip_dest, key))
-    # config = cea.config.Configuration()
-    # zip_loc = os.path.join(config.general.scenario)
-    # zip_dest = config.bigmacc.keys
-    #
-    # # root_loc = os.path.join()
-    #
-    # make_archive(zip_loc, os.path.join(zip_dest, key + ".zip"))
-    # un_zip(os.path.join(zip_dest, key))

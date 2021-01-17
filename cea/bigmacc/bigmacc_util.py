@@ -5,6 +5,7 @@ General utilities for the bigmacc project.
 import os
 import zipfile
 import itertools
+import shutil
 
 __author__ = "Justin McCarty"
 __copyright__ = ""
