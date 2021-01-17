@@ -85,13 +85,13 @@ def main(config):
         # clone out the simulation inputs and outputs directory
         print(' - Transferring results directory for experiment {}.'.format(i))
 
-        inputs_path = os.path.join(config.bigmacc.keys, i, 'inputs')
-        outputs_path = os.path.join(config.bigmacc.keys, i, 'outputs', 'data')
-
-        distutils.dir_util.copy_tree(locator.get_data_results_folder(), outputs_path)
-        distutils.dir_util.copy_tree(locator.get_input_folder(), inputs_path)
-
-        shutil.make_archive(config.bigmacc.scenario, 'zip', os.path.join(config.bigmacc.keys, i))
+        # inputs_path = os.path.join(config.bigmacc.keys, i, 'inputs')
+        # outputs_path = os.path.join(config.bigmacc.keys, i, 'outputs', 'data')
+        #
+        # distutils.dir_util.copy_tree(locator.get_data_results_folder(), outputs_path)
+        # distutils.dir_util.copy_tree(locator.get_input_folder(), inputs_path)
+        #
+        # shutil.make_archive(config.bigmacc.scenario, 'zip', os.path.join(config.bigmacc.keys, i))
 
         util.make_archive(os.path.join(config.general.scenario),
                           os.path.join(config.bigmacc.keys, i + ".zip"))

@@ -4,13 +4,6 @@ General utilities for the bigmacc project.
 
 import os
 import zipfile
-import cea.config
-import cea.inputlocator
-import cea.demand.demand_main
-# import cea.resources.radiation_daysim.radiation_main
-import cea.bigmacc.copy_results
-import cea.datamanagement.archetypes_mapper
-import configparser
 import itertools
 
 __author__ = "Justin McCarty"

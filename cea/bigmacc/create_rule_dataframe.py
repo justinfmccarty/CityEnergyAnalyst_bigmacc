@@ -156,6 +156,7 @@ def PV_GR_PH_rule(key, PV_GR_PH_value):  # ALL BUILDINGS HAVE ROOFTOP PV AND GRE
         return np.nan
 
 
+# noinspection PyTypeChecker
 def rule_dataframe(key_list,run_rad):
     key_df = pd.DataFrame(data={'keys': key_list})
 

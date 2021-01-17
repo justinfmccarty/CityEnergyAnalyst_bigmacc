@@ -1,10 +1,6 @@
 """
 For copying results at the end of the script before writing over them in a new loop simulation"""
 
-
-
-
-import os
 import cea.config
 import cea.inputlocator
 

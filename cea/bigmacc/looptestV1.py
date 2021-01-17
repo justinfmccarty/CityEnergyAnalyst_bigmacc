@@ -41,13 +41,18 @@ def set(config):
     print(config.bigmacc.copyrad)
 
 def pr(config):
-    print(2)
-    print(config.bigmacc.copyrad)
+    # print(2)
+    # print(config.bigmacc.copyrad)
+    print(config.general.scenario)
+    print(os.path.join(config.bigmacc.keys, "0010011.zip"))
+
+def main(config):
+    # set(config)
+    pr(config)
 
 
 if __name__ == '__main__':
-    set(cea.config.Configuration())
-    pr(cea.config.Configuration())
+    main(cea.config.Configuration())
 
 
     # project = r"C:\Users\justi\Documents\project"
