@@ -24,7 +24,7 @@ import cea.bigmacc.create_rule_dataframe
 import shutil
 
 __author__ = "Justin McCarty"
-__copyright__ = ""
+__copyright__ = " "
 __credits__ = ["Justin McCarty"]
 __license__ = "MIT"
 __version__ = "0.1"
