@@ -2,19 +2,20 @@
 The BIGMACC script.
 """
 
-
-
 import os
+import shutil
 import cea.config
+import cea.utilities
 import cea.inputlocator
 import cea.demand.demand_main
 import cea.resources.radiation_daysim.radiation_main
 import cea.bigmacc.copy_results
+import cea.bigmacc.bigmacc_rules
 import cea.datamanagement.archetypes_mapper
+import cea.datamanagement.data_initializer
 import cea.bigmacc.bigmacc_util as util
 import distutils
 from distutils import dir_util
-import shutil
 
 __author__ = "Justin McCarty"
 __copyright__ = ""
@@ -39,7 +40,6 @@ def main(config):
 
     locator = cea.inputlocator.InputLocator(config.scenario)
 
-
     ## SCENARIO SETUP ---
     key_list = util.generate_key_list(config.bigmacc.strategies)
 
@@ -47,8 +47,7 @@ def main(config):
         print('START: experiment {}.'.format(i))
         cea.config.key = i
 
-
-        os.mkdir(os.path.join(config.general.project, i))
+        os.mkdir(os.path.join(config.bigmacc.keys, i))
         # run the archetype mapper to leverage the newly loaded typology file and set parameters
         print(' - Running archetype mapper for experiment {} to remove changes made in the last experiment.'.format(i))
         try:
@@ -64,14 +63,14 @@ def main(config):
             pass
 
         ## SIMULATIONS ---
-        if config.bigmacc.commandpath == True:
+        if config.bigmacc.runrad == True:
             print(' - Running radiation simulation for experiment {}.'.format(i))
             try:
                 cea.resources.radiation_daysim.radiation_main.main(config)
             except:
                 pass
         else:
-            radfiles = cea.bigmacc.copyrad
+            radfiles = config.bigmacc.copyrad
             distutils.dir_util.copy_tree(radfiles, locator.get_solar_radiation_folder())
             print(' - Experiment {} does not require new radiation simulation.'.format(i))
 
@@ -86,24 +85,24 @@ def main(config):
         # clone out the simulation inputs and outputs directory
         print(' - Transferring results directory for experiment {}.'.format(i))
 
-        inputs_path = os.path.join(config.general.project, i,'inputs')
-        outputs_path = os.path.join(config.general.project, i,'outputs','data')
+        inputs_path = os.path.join(config.bigmacc.keys, i, 'inputs')
+        outputs_path = os.path.join(config.bigmacc.keys, i, 'outputs', 'data')
 
-        try:
-            distutils.dir_util.copy_tree(locator.get_data_results_folder(), outputs_path)
-            distutils.dir_util.copy_tree(locator.get_input_folder(), inputs_path)
-        except:
-            pass
+        distutils.dir_util.copy_tree(locator.get_data_results_folder(), outputs_path)
+        distutils.dir_util.copy_tree(locator.get_input_folder(), inputs_path)
 
+        shutil.make_archive(config.bigmacc.scenario, 'zip', os.path.join(config.bigmacc.keys, i))
+
+        util.make_archive(os.path.join(config.general.scenario),
+                          os.path.join(config.bigmacc.keys, i + ".zip"))
+        util.un_zip(os.path.join(config.bigmacc.keys, i))
 
         ## RESET FILES FOR NEXT ---
-        cea.utilities.data_initializer.main(config)
+        # cea.datamanagement.data_initializer.main(config)
 
         # delete results
         shutil.rmtree(locator.get_data_results_folder())
-
         print('END: experiment {}. \n'.format(i))
-
 
 
 if __name__ == '__main__':

@@ -1,42 +1,41 @@
 """
-Embodied energy and related grey emissions model algorithm
+costs according to hvac and envelope systems
 """
 
-
-
-
-import os
+import numpy as np
+import pandas as pd
+from geopandas import GeoDataFrame as gpdf
+import itertools
+import cea.config
+import cea.inputlocator
 
 import numpy as np
 from geopandas import GeoDataFrame as Gdf
 import pandas as pd
-
-import cea.config
-import cea.inputlocator
+from cea.analysis.costs.equations import calc_capex_annualized, calc_opex_annualized
 from cea.constants import SERVICE_LIFE_OF_BUILDINGS, SERVICE_LIFE_OF_TECHNICAL_SYSTEMS, \
     CONVERSION_AREA_TO_FLOOR_AREA_RATIO, EMISSIONS_EMBODIED_TECHNICAL_SYSTEMS
 from cea.utilities.dbf import dbf_to_dataframe
 
-__author__ = "Jimeno A. Fonseca"
-__copyright__ = "Copyright 2015, Architecture and Building Systems - ETH Zurich"
-__credits__ = ["Jimeno A. Fonseca", "Martin Mosteiro"]
+
+
+__author__ = "Justin McCarty adjusting Jimeno A. Fonseca"
+__copyright__ = "Copyright 2020, Architecture and Building Systems - ETH Zurich"
+__credits__ = ["Jimeno A. Fonseca", "Emanuel Riegelbauer", "Justin McCarty"]
 __license__ = "MIT"
 __version__ = "0.1"
-__maintainer__ = "Daren Thomas"
-__email__ = "cea@arch.ethz.ch"
+__maintainer__ = ""
+__email__ = "mccarty.justin.f@gmail.com"
 __status__ = "Production"
 
 
-def lca_embodied(year_to_calculate, locator):
+
+
+def building_capex(year_to_calculate, locator):
     """
-    Algorithm to calculate the embodied emissions and non-renewable primary energy of buildings according to the method
-    of [Fonseca et al., 2015] and [Thoma et al., 2014]. The calculation method assumes a 60 year payoff for the embodied
-    energy and emissions of a building, after which both values become zero.
+    Calculation of non-supply capital costs.
 
-    The results are provided in total as well as per square meter:
-
-    - embodied non-renewable primary energy: E_nre_pen_GJ and E_nre_pen_MJm2
-    - embodied greenhouse gas emissions: GHG_sys_embodied_tonCO2 and GHG_sys_embodied_kgCO2m2
+    The results are
 
     As part of the algorithm, the following files are read from InputLocator:
 
@@ -53,7 +52,7 @@ def lca_embodied(year_to_calculate, locator):
 
     As a result, the following file is created:
 
-    - Total_LCA_embodied: .csv
+    - Total_building_capex: .csv
         csv file of yearly primary energy and grey emissions per building stored in locator.get_lca_embodied()
 
     :param year_to_calculate:  year between 1900 and 2100 indicating when embodied energy is evaluated
@@ -63,12 +62,6 @@ def lca_embodied(year_to_calculate, locator):
     :type locator: InputLocator
     :returns: This function does not return anything
     :rtype: NoneType
-
-    .. [Fonseca et al., 2015] Fonseca et al. (2015) "Assessing the environmental impact of future urban developments at
-        neighborhood scale." CISBAT 2015.
-    .. [Thoma et al., 2014] Thoma et al. (2014). "Estimation of base-values for grey energy, primary energy, global
-        warming potential (GWP 100A) and Umweltbelastungspunkte (UBP 2006) for Swiss constructions from before 1920
-        until today." CUI 2014.
 
 
     Files read / written from InputLocator:
@@ -97,7 +90,7 @@ def lca_embodied(year_to_calculate, locator):
     path_results : string
         path to demand results folder emissions
     """
-
+    print('Calculating the Total Annualized costs of building components.')
     # local variables
     age_df = dbf_to_dataframe(locator.get_building_typology())
     architecture_df = dbf_to_dataframe(locator.get_building_architecture())
@@ -113,17 +106,11 @@ def lca_embodied(year_to_calculate, locator):
     surface_database_roof = pd.read_excel(locator.get_database_envelope_systems(), "ROOF")
     surface_database_walls = pd.read_excel(locator.get_database_envelope_systems(), "WALL")
     surface_database_floors = pd.read_excel(locator.get_database_envelope_systems(), "FLOOR")
-
-    # added for bigmacc
     surface_database_cons = pd.read_excel(locator.get_database_envelope_systems(), "CONSTRUCTION")
     surface_database_leak = pd.read_excel(locator.get_database_envelope_systems(), "LEAKAGE")
-
     hvac_database_cooling = pd.read_excel(locator.get_database_air_conditioning_systems(), "COOLING")
     hvac_database_heating = pd.read_excel(locator.get_database_air_conditioning_systems(), "HEATING")
     hvac_database_vent = pd.read_excel(locator.get_database_air_conditioning_systems(), "VENTILATION")
-    supply_database_cooling = pd.read_excel(locator.get_database_supply_assemblies(), "COOLING")
-    supply_database_heating = pd.read_excel(locator.get_database_supply_assemblies(), "HEATING")
-    supply_database_dhw = pd.read_excel(locator.get_database_supply_assemblies(), "HOT_WATER")
 
 
 
@@ -133,37 +120,28 @@ def lca_embodied(year_to_calculate, locator):
     df3 = architecture_df.merge(surface_database_walls, left_on='type_wall', right_on='code')
     df4 = architecture_df.merge(surface_database_floors, left_on='type_floor', right_on='code')
     df5 = architecture_df.merge(surface_database_floors, left_on='type_base', right_on='code')
-    df5.rename({'GHG_FLOOR_kgCO2m2': 'GHG_BASE_kgCO2m2'}, inplace=True, axis=1)
+    df5.rename({'capex_FLOOR': 'capex_BASE'}, inplace=True, axis=1)
     df6 = architecture_df.merge(surface_database_walls, left_on='type_part', right_on='code')
-    df6.rename({'GHG_WALL_kgCO2m2': 'GHG_PART_kgCO2m2'}, inplace=True, axis=1)
-
-    # added for bigmacc
+    df6.rename({'capex_WALL': 'capex_PART'}, inplace=True, axis=1)
     df7 = architecture_df.merge(surface_database_cons, left_on='type_cons', right_on='code')
     df8 = architecture_df.merge(surface_database_leak, left_on='type_leak', right_on='code')
     df9 = hvac_df.merge(hvac_database_cooling, left_on='type_cs', right_on='code')
     df10 = hvac_df.merge(hvac_database_heating, left_on='type_hs', right_on='code')
-    df11 = supply_df.merge(supply_database_cooling, left_on='type_cs', right_on='code')
-    df12 = supply_df.merge(supply_database_heating, left_on='type_hs', right_on='code')
-    df13 = supply_df.merge(supply_database_dhw, left_on='type_dhw', right_on='code')
     df14 = supply_df.merge(hvac_database_vent, left_on='type_vent', right_on='code')
 
-
-    fields = ['Name', "GHG_WIN_kgCO2m2"]
-    fields2 = ['Name', "GHG_ROOF_kgCO2m2"]
-    fields3 = ['Name', "GHG_WALL_kgCO2m2"]
-    fields4 = ['Name', "GHG_FLOOR_kgCO2m2"]
-    fields5 = ['Name', "GHG_BASE_kgCO2m2"]
-    fields6 = ['Name', "GHG_PART_kgCO2m2"]
+    fields = ['Name', "capex_WIN"]
+    fields2 = ['Name', "capex_ROOF"]
+    fields3 = ['Name', "capex_WALL"]
+    fields4 = ['Name', "capex_FLOOR"]
+    fields5 = ['Name', "capex_BASE"]
+    fields6 = ['Name', "capex_PART"]
 
     # added for bigmacc
-    fields7 = ['Name', "GHG_CONS_kgCO2m2"]
-    fields8 = ['Name', "GHG_LEAK_kgCO2m2"]
-    fields9 = ['Name', "GHG_hvacCS_kgCO2m2"]
-    fields10 = ['Name', "GHG_hvacHS_kgCO2m2"]
-    fields11 = ['Name', "GHG_supplyCS_kgCO2m2"]
-    fields12 = ['Name', "GHG_supplyHS_kgCO2m2"]
-    fields13 = ['Name', "GHG_supplyDHW_kgCO2m2"]
-    fields14 = ['Name', "GHG_hvacVENT_kgCO2m2"]
+    fields7 = ['Name', "capex_CONS"]
+    fields8 = ['Name', "capex_LEAK"]
+    fields9 = ['Name', "capex_hvacCS"]
+    fields10 = ['Name', "capex_hvacHS"]
+    fields14 = ['Name', "capex_hvacVENT"]
 
     surface_properties = df[fields].merge(df2[fields2],
                                                     on='Name').merge(df3[fields3],
@@ -174,9 +152,6 @@ def lca_embodied(year_to_calculate, locator):
                                                     on='Name').merge(df8[fields8],
                                                     on='Name').merge(df9[fields9],
                                                     on='Name').merge(df10[fields10],
-                                                    on='Name').merge(df11[fields11],
-                                                    on='Name').merge(df12[fields12],
-                                                    on='Name').merge(df13[fields13],
                                                     on='Name').merge(df14[fields14], on='Name')
 
     # DataFrame with joined data for all categories
@@ -212,9 +187,8 @@ def lca_embodied(year_to_calculate, locator):
     result_emissions = calculate_contributions(data_meged_df,
                                                year_to_calculate)
 
-    # export the results for embodied emissions (E_ghg_) and non-renewable primary energy (E_nre_pen_) for each
-    # building, both total (in t CO2-eq. and GJ) and per square meter (in kg CO2-eq./m2 and MJ/m2)
-    result_emissions.to_csv(locator.get_lca_embodied(),
+    # export the results for building system costs
+    result_emissions.to_csv(locator.get_building_tac_file(),
                             index=False,
                             float_format='%.2f', na_rep='nan')
     print('done!')
@@ -222,7 +196,7 @@ def lca_embodied(year_to_calculate, locator):
 
 def calculate_contributions(df, year_to_calculate):
     """
-    Calculate the embodied energy/emissions for each building based on their construction year, and the area and 
+    Calculate the embodied energy/emissions for each building based on their construction year, and the area and
     renovation year of each building component.
 
     :param archetype: String that defines whether the 'EMBODIED_ENERGY' or 'EMBODIED_EMISSIONS' are being calculated.
@@ -253,69 +227,30 @@ def calculate_contributions(df, year_to_calculate):
     ## if it was built more than 60 years before, the embodied energy/emissions have been "paid off" and are set to 0
     df['confirm'] = df.apply(lambda x: calc_if_existing(x['delta_year'], SERVICE_LIFE_OF_BUILDINGS), axis=1)
     ## if it was built less than 60 years before, the contribution from each building component is calculated
-    df[total_column] = ((df['GHG_WALL_kgCO2m2'] * (df['area_walls_ext_ag'] + df['area_walls_ext_bg']) +
-                         df['GHG_WIN_kgCO2m2'] * df['windows_ag'] +
-                         df['GHG_FLOOR_kgCO2m2'] * df['floor_area_ag'] +
-                         df['GHG_CONS_kgCO2m2'] * (df['floor_area_bg'] +df['floor_area_ag'])  +
-                         df['GHG_LEAK_kgCO2m2'] * (df['area_walls_ext_ag'] + df['area_walls_ext_bg']) +
-                         df['GHG_hvacCS_kgCO2m2'] * df['floor_area_ag'] +
-                         df['GHG_hvacHS_kgCO2m2'] * df['floor_area_ag'] +
-                         df['GHG_supplyCS_kgCO2m2'] * df['floor_area_ag'] +
-                         df['GHG_supplyHS_kgCO2m2'] * df['floor_area_ag'] +
-                         df['GHG_supplyDHW_kgCO2m2'] * df['floor_area_ag'] +
-                         df['GHG_hvacVENT_kgCO2m2'] * df['floor_area_ag'] +
-                         df['GHG_BASE_kgCO2m2'] * df['floor_area_bg'] +
-                         df['GHG_PART_kgCO2m2'] * (df['floor_area_ag']+df['floor_area_bg']) * CONVERSION_AREA_TO_FLOOR_AREA_RATIO +
-                         df['GHG_ROOF_kgCO2m2'] * df['footprint']) / SERVICE_LIFE_OF_BUILDINGS) * df['confirm']
+    df[total_column] = ((df['capex_WALL'] * (df['area_walls_ext_ag'] + df['area_walls_ext_bg']) +
+                         df['capex_WIN'] * df['windows_ag'] +
+                         df['capex_FLOOR'] * df['floor_area_ag'] +
+                         df['capex_CONS'] * (df['floor_area_bg'] +df['floor_area_ag'])  +
+                         df['capex_LEAK'] * (df['area_walls_ext_ag'] + df['area_walls_ext_bg']) +
+                         df['capex_hvacCS'] * df['floor_area_ag'] +
+                         df['capex_hvacHS'] * df['floor_area_ag'] +
+                         df['capex_hvacVENT'] * df['floor_area_ag'] +
+                         df['capex_BASE'] * df['floor_area_bg'] +
+                         df['capex_PART'] * (df['floor_area_ag']+df['floor_area_bg']) * CONVERSION_AREA_TO_FLOOR_AREA_RATIO +
+                         df['capex_ROOF'] * df['footprint']) / SERVICE_LIFE_OF_TECHNICAL_SYSTEMS) * df['confirm']
 
     # df[total_column] += (((df['floor_area_ag'] + df['floor_area_bg']) * EMISSIONS_EMBODIED_TECHNICAL_SYSTEMS) / SERVICE_LIFE_OF_TECHNICAL_SYSTEMS) * df['confirm']
 
-    # the total embodied energy/emissions are calculated as a sum of the contributions from construction and retrofits
-    df['GHG_sys_embodied_tonCO2'] = df[total_column] / 1000  # kG-CO2 eq to ton
-    df['GHG_sys_embodied_kgCO2m2'] = df[total_column] / df['GFA_m2']
+    # the total cost intensity
+    df['capex_total_cost_m2'] = df[total_column] / df['GFA_m2']
 
     # the total and specific embodied energy/emissions are returned
     # result = df[['Name', 'GHG_sys_embodied_tonCO2', 'GHG_sys_embodied_kgCO2m2', 'GFA_m2']]
-    result = df
-    return result
 
+    df['capex_building_systems'] = df[total_column]
+    df['opex_building_systems'] = df['capex_building_systems'] * (.05)
+    df['capex_ann_building_systems'] = df['capex_building_systems'].apply(lambda x: calc_capex_annualized(x, 5, 30),axis=1)
+    df['opex_ann_building_systems'] = df['opex_building_systems'].apply(lambda x: calc_opex_annualized(x, 5, 30),axis=1)
+    df['TAC_building_systems'] = df['capex_ann_building_systems'] + df['opex_ann_building_systems']
 
-def calc_if_existing(x, y):
-    """
-    Function to verify if one value is greater than or equal to another (then return 1) or not (return 0). This is used
-    to verify whether a building's construction or retrofits happened more than 60 years before the year to calculate.
-    Since the embodied energy and emissions are calculated over 60 years, if the year of calculation is more than 60 
-    years after construction, the results will be 0.
-    
-    :param x: Number of years since construction/retrofit
-    :type x: long
-    :param y: Number of years over which the embodied energy/emissions calculation is carried out (i.e., 60)
-    :type y: int
-
-    :return value: 1 if x <= y; 0 otherwise
-    :rtype value: int
-
-    """
-
-    if x <= y:
-        return 1
-    else:
-        return 0
-
-
-def calc_code(code1, code2, code3, code4):
-    return str(code1) + str(code2) + str(code3) + str(code4)
-
-
-def main(config):
-    assert os.path.exists(config.scenario), 'Scenario not found: %s' % config.scenario
-    locator = cea.inputlocator.InputLocator(scenario=config.scenario)
-
-    print('Running embodied-energy with scenario = %s' % config.scenario)
-    print('Running embodied-energy with year-to-calculate = %s' % config.emissions.year_to_calculate)
-
-    lca_embodied(locator=locator, year_to_calculate=config.emissions.year_to_calculate)
-
-
-if __name__ == '__main__':
-    main(cea.config.Configuration())
+    return df

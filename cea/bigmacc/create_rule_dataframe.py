@@ -31,11 +31,11 @@ def runrad_rule(key, run_list):  # SETS FOR HEATING REDUCED 1C (20C TO 19C) AND 
 def copy_key(key, run_list):
     config = cea.config.Configuration()
     if key in run_list:
-        return os.path.join(config.general.project, key, 'outputs', 'data', 'solar-radiation')
+        return os.path.join(config.bigmacc.keys, key, 'intial', 'outputs', 'data', 'solar-radiation')
     elif util.change_key(key) in run_list:
-        return os.path.join(config.general.project, util.change_key(key), 'outputs', 'data', 'solar-radiation')
+        return os.path.join(config.bigmacc.keys, util.change_key(key), 'intial', 'outputs', 'data', 'solar-radiation')
     else:
-        returnos.path.join(config.general.project, key, 'outputs', 'data', 'solar-radiation')
+        return os.path.join(config.bigmacc.keys, key, 'intial','outputs', 'data', 'solar-radiation')
 
 def SP_rule(key, SP_value):  # SET INTEGER FOR HEATING AND COOLING SETPOINT
     keys = [int(d) for d in key]
@@ -43,7 +43,6 @@ def SP_rule(key, SP_value):  # SET INTEGER FOR HEATING AND COOLING SETPOINT
         return SP_value
     else:
         return np.nan
-
 
 def GR_rule(key, GR_value):  # ALL BUILDINGS GET GREEN ROOFS
     keys = [int(d) for d in key]
@@ -210,8 +209,6 @@ def main(config):
     key_list = util.generate_key_list(config.bigmacc.strategies)
     run_rad = config.bigmacc.runradiation
     return rule_dataframe(key_list,run_rad)
-
-
 
 if __name__ == '__main__':
     main(cea.config.Configuration())

@@ -530,4 +530,3 @@ BIGMACC:
     interfaces: [ cli, dashboard ]
     module: cea.bigmacc.copy_results
     parameters: [ get_demand_results_folder ]
-

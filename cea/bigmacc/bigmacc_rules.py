@@ -194,10 +194,9 @@ def seawater_rule(df, config):  # DISTRICT COOLING SYSTEM INSTALLED LINKED TO WR
 
 def rooftoppv_rule(df, config):  # ALL BUILDINGS HAVE ROOFTOP PV INSTALLED
     locator = cea.inputlocator.InputLocator(config.scenario)
-    keys = [int(x) for x in str(cea.config.key)]
+    keys = [int(x) for x in str(config.bigmacc.key)]
 
     if keys[7] == 1:
-
 
         arch_path = locator.get_building_architecture()
         arch = cea.utilities.dbf.dbf_to_dataframe(arch_path)
@@ -230,10 +229,9 @@ def rooftoppv_rule(df, config):  # ALL BUILDINGS HAVE ROOFTOP PV INSTALLED
         config.bigmacc.heatgain = 0.0
     return print(' - Rule for rooftop PV use checked')
 
-def setrad_rule(df, config): # EXISTING BUILDINGS HAVE DEEP WALL AND WINDOW RETROFIT (WWR REDUCED)
+def setrad_rule(df, config):
     config.bigmacc.runrad = df['run_rad'].values
-    config.bigmacc.radpath = config.bigmacc.copyrad = os.path.join(rules_df[rules_df['keys'] == '00100010']['copy_rad'].values)
-
+    config.bigmacc.copyrad = df['copy_rad'].values
 
 def rule_check(config):
     """
@@ -244,11 +242,8 @@ def rule_check(config):
     :return: print statement
     """
 
-    locator = cea.inputlocator.InputLocator(config.scenario)
     rules_df = cea.bigmacc.create_rule_dataframe.main(config)
-    rules_df_sub = rules_df[rules_df['keys']==key]
-
-    keys = [int(x) for x in str(cea.config.key)]
+    rules_df_sub = rules_df[rules_df['keys'] == config.bigmacc.key]
 
     settemps_rule(rules_df_sub,config) # 1
     greenroof_rule(rules_df_sub,config) # 2

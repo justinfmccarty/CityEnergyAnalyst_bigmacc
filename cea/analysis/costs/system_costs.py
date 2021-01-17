@@ -9,6 +9,7 @@ import itertools
 import cea.config
 import cea.inputlocator
 from cea.analysis.costs.equations import calc_capex_annualized, calc_opex_annualized
+from cea.analysis.costs.building_costs import building_capex
 
 __author__ = "Jimeno A. Fonseca"
 __copyright__ = "Copyright 2020, Architecture and Building Systems - ETH Zurich"
@@ -211,10 +212,12 @@ def get_databases(demand, locator):
 
 def main(config):
     locator = cea.inputlocator.InputLocator(scenario=config.scenario)
-
     print('Running system-costs with scenario = %s' % config.scenario)
-
     costs_main(locator=locator, config=config)
+
+    if config.costs.building==True:
+        building_capex(config.emissions.year_to_calculate, locator=locator)
+
 
 
 if __name__ == '__main__':

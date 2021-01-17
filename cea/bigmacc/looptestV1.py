@@ -6,20 +6,22 @@ NOTE: ADD YOUR SCRIPT'S DOCUMENTATION HERE (what, why, include literature refere
 
 # import cea.bigmacc.bigmacc_util as util
 import cea.resources.radiation_daysim.radiation_main
-# import os
-# import cea.config
+import os
+import cea.config
 # import cea.inputlocator
 # import cea.demand.demand_main
 # import cea.resources.radiation_daysim.radiation_main
 # import cea.bigmacc.copy_results
 # import cea.datamanagement.archetypes_mapper
-# # import cea.bigmacc.bigmacc_util as bigmacc_util
-# import cea.bigmacc.create_rule_dataframe as createdf
+import zipfile
+
+import cea.bigmacc.bigmacc_util as util
+import cea.bigmacc.create_rule_dataframe
 # import numpy as np
 # import itertools
 # import distutils
 # from distutils import dir_util
-# import shutil
+import shutil
 
 __author__ = "Justin McCarty"
 __copyright__ = ""
@@ -30,30 +32,45 @@ __maintainer__ = ""
 __email__ = ""
 __status__ = ""
 
-#
-# def order_key_list(run_list, key_list):
-#     no_run_rad_list = list(set(key_list) - set(run_list))
-#     final_list = list()
-#     final_list.extend(run_list)
-#     final_list.extend(no_run_rad_list)
-#     return final_list
-#
-#
-# def run(config):
-#     locator = cea.inputlocator.InputLocator(config.scenario)
-#     i = 'testnite'
-#
-#     inputs_path = os.path.join(config.general.project, i, 'inputs')
-#     outputs_path = os.path.join(config.general.project, i, 'outputs')
-#
-#     distutils.dir_util.copy_tree(locator.get_data_results_folder(), outputs_path)
-#     distutils.dir_util.copy_tree(locator.get_input_folder(), inputs_path)
-#
+def set(config):
+    key_list = util.generate_key_list(config.bigmacc.strategies)
+    run_rad = config.bigmacc.runradiation
+    df = cea.bigmacc.create_rule_dataframe.main(config)
+    config.bigmacc.copyrad = 'def' #df['copy_rad'].values[1]
+    print(1)
+    print(config.bigmacc.copyrad)
 
-def main(n):
-    # util.print_test(n)
-    print(n)
+def pr(config):
+    print(2)
+    print(config.bigmacc.copyrad)
+
 
 if __name__ == '__main__':
-    # main(cea.config.Configuration())
-    main(3)
+    set(cea.config.Configuration())
+    pr(cea.config.Configuration())
+
+
+    # project = r"C:\Users\justi\Documents\project"
+    # destination = r"C:\Users\justi\Desktop\project"
+    # parent = "parent"
+    # scenario = "initial"
+    # key = "key"
+    #
+    # # os.mkdir(os.path.join(destination,parent,scenario))
+    #
+    # zip_loc = os.path.join(project, parent, scenario)
+    #
+    # zip_dest = os.path.join(destination, parent)
+    #
+    # # root_loc = os.path.join()
+    #
+    # make_archive(zip_loc, os.path.join(zip_dest, key+".zip"))
+    # un_zip(os.path.join(zip_dest, key))
+    # config = cea.config.Configuration()
+    # zip_loc = os.path.join(config.general.scenario)
+    # zip_dest = config.bigmacc.keys
+    #
+    # # root_loc = os.path.join()
+    #
+    # make_archive(zip_loc, os.path.join(zip_dest, key + ".zip"))
+    # un_zip(os.path.join(zip_dest, key))
