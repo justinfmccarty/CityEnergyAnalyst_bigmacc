@@ -31,7 +31,7 @@ __email__ = ""
 __status__ = ""
 
 
-def main(config):
+def run(config):
     """
     This is the main entry point to your script. Any parameters used by your script must be present in the ``config``
     parameter. The CLI will call this ``main`` function passing in a ``config`` object after adjusting the configuration
@@ -47,8 +47,8 @@ def main(config):
     ## SCENARIO SETUP ---
     key_list = util.generate_key_list(config.bigmacc.strategies)
 
-    initialdf = pd.DataFrame(columns=['Experiments', 'Completed', 'Experiment Time', 'Unique Radiation'])
-    initialdf.to_csv(os.path.join(config.bigmacc.keys, 'logger.csv'))
+    # initialdf = pd.DataFrame(columns=['Experiments', 'Completed', 'Experiment Time', 'Unique Radiation'])
+    # initialdf.to_csv(os.path.join(config.bigmacc.keys, 'logger.csv'))
 
     for i in key_list:
         scen_check = pd.read_csv(os.path.join(config.bigmacc.keys, 'logger.csv'), index_col='Unnamed: 0')
@@ -131,6 +131,8 @@ def main(config):
             shutil.rmtree(locator.get_data_results_folder())
             print('END: experiment {}. \n'.format(i))
 
+def main(config):
+    run(config)
 
 if __name__ == '__main__':
     main(cea.config.Configuration())

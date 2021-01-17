@@ -474,14 +474,10 @@ BIGMACC:
     interfaces: [ cli, dashboard ]
     module: cea.bigmacc.bigmacc
     parameters: [ 'general:scenario',
-                  'bigmacc:keys',
-                  'bigmacc:rooftop',
-                  'bigmacc:runrad',
-                  'bigmacc:copyrad',
-                  'bigmacc:heatgain',
-                  'bigmacc:key',
-                  'bigmac:strategies']
-#                  archetypes-mapper]
+                  bigmacc,
+                  radiation,
+                  demand,
+                  archetypes-mapper]
     input-files:
       - [ get_zone_geometry ]
       - [ get_building_typology ]
