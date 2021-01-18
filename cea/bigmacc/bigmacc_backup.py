@@ -21,6 +21,7 @@ import cea.demand.schedule_maker.schedule_maker as schedule_maker
 import cea.bigmacc.bigmacc_util as util
 import distutils
 import cea.technologies.solar.photovoltaic as photovoltaic
+import cea.resources.water_body_potential as water
 from distutils import dir_util
 
 __author__ = "Justin McCarty"
@@ -110,6 +111,11 @@ def run(config):
             print(' - Running radiation simulation for experiment {}.'.format(i))
             photovoltaic.main(config)
 
+        # if water-body simulation is needed, run it.
+        if config.bigmacc.water == True:
+            print(' - Running radiation simulation for experiment {}.'.format(i))
+            water.main(config)
+
         # running the emissions and costing calculations
         cea.analysis.costs.system_costs.main(config)
         cea.analysis.lca.main.main(config)
@@ -118,7 +124,7 @@ def run(config):
         print(' - Transferring results directory for experiment {}.'.format(i))
 
         inputs_path = os.path.join(config.bigmacc.keys, i, config.general.scenario_name, 'inputs')
-        outputs_path = os.path.join(config.bigmacc.keys, i, config.general.scenario_name, 'outputs')
+        outputs_path = os.path.join(config.bigmacc.keys, i, config.general.scenario_name, 'outputs', 'data')
         # costs_path = os.path.join(config.bigmacc.keys, i, 'outputs', 'data', 'costs')
         # demand_path = os.path.join(config.bigmacc.keys, i, 'outputs', 'data', 'demand')
         # emissions_path = os.path.join(config.bigmacc.keys, i, 'outputs', 'data', 'emissions')
@@ -142,6 +148,7 @@ def run(config):
         shutil.rmtree(locator.get_demand_results_folder())
         shutil.rmtree(locator.get_lca_emissions_results_folder())
         shutil.rmtree(locator.get_solar_radiation_folder())
+        shutil.rmtree(locator.get_potentials_folder())
         print('END: experiment {}. \n'.format(i))
 
 
@@ -158,6 +165,7 @@ def main(config):
 
     for i in key_list:
         config.bigmacc.key = i
+        print('key in main')
         print(config.bigmacc.key)
         run(config)
 
