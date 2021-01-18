@@ -111,7 +111,7 @@ def passivehouse_rule(df, config): # NEW BUILD REQ PASSIVE
 
         air_con_path = locator.get_building_air_conditioning()
         air_con = cea.utilities.dbf.dbf_to_dataframe(air_con_path)
-        air_con.loc[air_con.Name.isin(new_bldgs), 'type_cs'] = str(df['HP_hvac_cs'].values.tolist()[0])
+        air_con.loc[air_con.Name.isin(new_bldgs), 'type_cs'] = str(df['PH_hvac_cs'].values.tolist()[0])
 
         cea.utilities.dbf.dataframe_to_dbf(air_con, air_con_path)
 
