@@ -7,8 +7,7 @@ import os
 import time
 import warnings
 from itertools import repeat
-import logging
-logging.getLogger('numba').setLevel(logging.WARNING)
+
 import cea.config
 import cea.inputlocator
 import cea.utilities.parallel

@@ -5,6 +5,8 @@ The BIGMACC script.
 import os
 import pandas as pd
 import time
+import logging
+logging.getLogger('numba').setLevel(logging.WARNING)
 import shutil
 import cea.config
 import cea.utilities
