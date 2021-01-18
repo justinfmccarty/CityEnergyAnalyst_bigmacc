@@ -212,7 +212,7 @@ def rule_dataframe(config):
     return key_df
 
 def main(config):
-    key_list = util.generate_key_list(config.bigmacc.strategies)
+    key_list = util.generate_key_list(config)
     # run_rad = config.bigmacc.runradiation
     # return rule_dataframe(key_list,run_rad)
     return rule_dataframe(config)

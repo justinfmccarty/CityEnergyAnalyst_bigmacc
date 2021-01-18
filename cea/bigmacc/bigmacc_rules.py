@@ -64,12 +64,12 @@ def deepretrofit_rule(df, config): # EXISTING BUILDINGS HAVE DEEP WALL AND WINDO
         arch.loc[arch.Name.isin(existing_bldgs), 'type_leak'] = str(df['DR_leak'].values.tolist()[0])  # second least leaky
         arch.loc[arch.Name.isin(existing_bldgs), 'type_wall'] = str(df['DR_wall'].values.tolist()[0])  # triple glazing low-e two way
 
-        arch.loc[arch.Name.isin(existing_bldgs), 'wwr_north'] = str(df['DR_wwr'].values.tolist()[0])
-        arch.loc[arch.Name.isin(existing_bldgs), 'wwr_east'] = str(df['DR_wwr'].values.tolist()[0])
-        arch.loc[arch.Name.isin(existing_bldgs), 'wwr_south'] = str(df['DR_wwr'].values.tolist()[0])
-        arch.loc[arch.Name.isin(existing_bldgs), 'wwr_west'] = str(df['DR_wwr'].values.tolist()[0])
+        arch.loc[arch.Name.isin(existing_bldgs), 'wwr_north'] = float(df['DR_wwr'].values.tolist()[0])
+        arch.loc[arch.Name.isin(existing_bldgs), 'wwr_east'] = float(df['DR_wwr'].values.tolist()[0])
+        arch.loc[arch.Name.isin(existing_bldgs), 'wwr_south'] = float(df['DR_wwr'].values.tolist()[0])
+        arch.loc[arch.Name.isin(existing_bldgs), 'wwr_west'] = float(df['DR_wwr'].values.tolist()[0])
 
-
+        arch.to_csv(r"C:\Users\justi\Desktop\test0.csv")
         cea.utilities.dbf.dataframe_to_dbf(arch, arch_path)
         print(' - Replacing type_win, type_leak, type_wall with high performance retrofits and reducing WWR to 20% for experiment {}.'.format(i))
     else:
