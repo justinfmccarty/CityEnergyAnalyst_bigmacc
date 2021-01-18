@@ -95,6 +95,7 @@ def run(config):
                 cea.resources.radiation_daysim.radiation_main.main(config)
         else:
             radfiles = config.bigmacc.copyrad
+            print(' - Copying radiation results from {}.'.format(radfiles))
             distutils.dir_util.copy_tree(radfiles, locator.get_solar_radiation_folder())
             # shutil.copy(radfiles, locator.get_solar_radiation_folder())
             print(' - Experiment {} does not require new radiation simulation.'.format(i))
@@ -113,13 +114,13 @@ def run(config):
         print(' - Run PV is {}.'.format(config.bigmacc.pv))
         # if PV simulation is needed, run it.
         if config.bigmacc.pv == True:
-            print(' - Running radiation simulation for experiment {}.'.format(i))
+            print(' - Running PV simulation for experiment {}.'.format(i))
             photovoltaic.main(config)
 
         print('Run water-body exchange is {}.'.format(config.bigmacc.water))
         # if water-body simulation is needed, run it.
         if config.bigmacc.water == True:
-            print(' - Running radiation simulation for experiment {}.'.format(i))
+            print(' - Running water body simulation for experiment {}.'.format(i))
             water.main(config)
 
         # running the emissions and costing calculations
