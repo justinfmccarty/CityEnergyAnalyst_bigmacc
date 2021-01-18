@@ -8,6 +8,7 @@ import time
 import warnings
 from itertools import repeat
 import logging
+logging.getLogger('numba').setLevel(logging.WARNING)
 import cea.config
 import cea.inputlocator
 import cea.utilities.parallel
@@ -64,8 +65,7 @@ def demand_calculation(locator, config):
     """
 
 
-    numba_logger = logging.getLogger('numba')
-    numba_logger.setLevel(logging.WARNING)
+
     # INITIALIZE TIMER
     t0 = time.perf_counter()
 
