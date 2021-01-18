@@ -11,7 +11,6 @@ import numpy as np
 import itertools
 import cea.bigmacc.bigmacc_util as util
 
-
 __author__ = "Justin McCarty"
 __copyright__ = ""
 __credits__ = ["Justin McCarty"]
@@ -28,14 +27,19 @@ def runrad_rule(key, run_list):  # SETS FOR HEATING REDUCED 1C (20C TO 19C) AND 
     else:
         return False
 
+
 def copy_key(key, run_list):
     config = cea.config.Configuration()
     if key in run_list:
-        return os.path.join(config.bigmacc.keys, key, config.general.scenario_name, 'outputs', 'data', 'solar-radiation')
+        return os.path.join(config.bigmacc.keys, key, config.general.scenario_name, 'outputs', 'data',
+                            'solar-radiation')
     elif util.change_key(key) in run_list:
-        return os.path.join(config.bigmacc.keys, util.change_key(key), config.general.scenario_name, 'outputs', 'data', 'solar-radiation')
+        return os.path.join(config.bigmacc.keys, util.change_key(key), config.general.scenario_name, 'outputs', 'data',
+                            'solar-radiation')
     else:
-        return os.path.join(config.bigmacc.keys, key, config.general.scenario_name,'outputs', 'data', 'solar-radiation')
+        return os.path.join(config.bigmacc.keys, key, config.general.scenario_name, 'outputs', 'data',
+                            'solar-radiation')
+
 
 def SP_rule(key, SP_value):  # SET INTEGER FOR HEATING AND COOLING SETPOINT
     keys = [int(d) for d in key]
@@ -43,6 +47,7 @@ def SP_rule(key, SP_value):  # SET INTEGER FOR HEATING AND COOLING SETPOINT
         return SP_value
     else:
         return np.nan
+
 
 def GR_rule(key, GR_value):  # ALL BUILDINGS GET GREEN ROOFS
     keys = [int(d) for d in key]
@@ -56,14 +61,6 @@ def DR_rule(key, DR_name):  # EXISTING BUILDINGS HAVE DEEP WALL AND WINDOW RETRO
     keys = [int(d) for d in key]
     if keys[2] == 1:
         return DR_name
-    else:
-        return np.nan
-
-
-def PH_rule(key, PH_value, PH_GR_value):  # NEW BUILD REQ PASSIVE
-    keys = [int(d) for d in key]
-    if keys[3] == 1:
-        return PH_value
     else:
         return np.nan
 
@@ -184,6 +181,7 @@ def rule_dataframe(config):
     key_df['PH_shade'] = key_df.apply(lambda x: PH_rule(x['keys'], 'SHADING_AS4'), axis=1)
     key_df['PH_wwr'] = key_df.apply(lambda x: PH_rule(x['keys'], 0.15), axis=1)
     key_df['PH_part'] = key_df.apply(lambda x: PH_rule(x['keys'], 'WALL_AS19'), axis=1)
+    key_df['PH_hvac_cs'] = key_df.apply(lambda x: PH_rule(x['keys'], 'HVAC_COOLING_AS4'), axis=1)
 
     key_df['HP_hvac_cs'] = key_df.apply(lambda x: HP_rule(x['keys'], 'HVAC_COOLING_AS1'), axis=1)
     key_df['HP_hvac_hs'] = key_df.apply(lambda x: HP_rule(x['keys'], 'HVAC_HEATING_AS4'), axis=1)
@@ -207,9 +205,10 @@ def rule_dataframe(config):
     key_df['PV_hg'] = key_df.apply(lambda x: PV_rule(x['keys'], 0.1), axis=1)
 
     key_df['run_rad'] = key_df.apply(lambda x: runrad_rule(x['keys'], config.bigmacc.runradiation), axis=1)
-    key_df['copy_rad'] = key_df.apply(lambda x: copy_key(x['keys'],config.bigmacc.runradiation),axis=1)
+    key_df['copy_rad'] = key_df.apply(lambda x: copy_key(x['keys'], config.bigmacc.runradiation), axis=1)
     key_df.to_csv(r"C:\Users\justi\Desktop\test0.csv")
     return key_df
+
 
 def main(config):
     key_list = util.generate_key_list(config)
