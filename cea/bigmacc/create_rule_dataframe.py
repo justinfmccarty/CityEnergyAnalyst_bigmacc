@@ -31,11 +31,11 @@ def runrad_rule(key, run_list):  # SETS FOR HEATING REDUCED 1C (20C TO 19C) AND 
 def copy_key(key, run_list):
     config = cea.config.Configuration()
     if key in run_list:
-        return os.path.join(config.bigmacc.keys, key, 'intial', 'outputs', 'data', 'solar-radiation')
+        return os.path.join(config.bigmacc.keys, key, config.general.scenario_name, 'outputs', 'data', 'solar-radiation')
     elif util.change_key(key) in run_list:
-        return os.path.join(config.bigmacc.keys, util.change_key(key), 'intial', 'outputs', 'data', 'solar-radiation')
+        return os.path.join(config.bigmacc.keys, util.change_key(key), config.general.scenario_name, 'outputs', 'data', 'solar-radiation')
     else:
-        return os.path.join(config.bigmacc.keys, key, 'intial','outputs', 'data', 'solar-radiation')
+        return os.path.join(config.bigmacc.keys, key, config.general.scenario_name,'outputs', 'data', 'solar-radiation')
 
 def SP_rule(key, SP_value):  # SET INTEGER FOR HEATING AND COOLING SETPOINT
     keys = [int(d) for d in key]
@@ -157,8 +157,12 @@ def PV_GR_PH_rule(key, PV_GR_PH_value):  # ALL BUILDINGS HAVE ROOFTOP PV AND GRE
 
 
 # noinspection PyTypeChecker
-def rule_dataframe(key_list,run_rad):
-    key_df = pd.DataFrame(data={'keys': key_list})
+def rule_dataframe(config):
+    print('key in dataframe')
+    print(config.bigmacc.key)
+    key_df = pd.DataFrame()
+    key_df['keys'] = pd.Series(config.bigmacc.key)
+    key_df['experiments'] = key_df['keys'].apply(lambda x: 'exp_{}'.format(x))
 
     key_df['SP_heat'] = key_df.apply(lambda x: SP_rule(x['keys'], -1), axis=1)
     key_df['SP_cool'] = key_df.apply(lambda x: SP_rule(x['keys'], 1), axis=1)
@@ -202,14 +206,17 @@ def rule_dataframe(key_list,run_rad):
     key_df['PV_GR_hg'] = key_df.apply(lambda x: PV_GR_rule(x['keys'], 0.4), axis=1)
     key_df['PV_hg'] = key_df.apply(lambda x: PV_rule(x['keys'], 0.1), axis=1)
 
-    key_df['run_rad'] = key_df.apply(lambda x: runrad_rule(x['keys'], run_rad), axis=1)
-    key_df['copy_rad'] = key_df.apply(lambda x: copy_key(x['keys'],run_rad),axis=1)
+    key_df['run_rad'] = key_df.apply(lambda x: runrad_rule(x['keys'], config.bigmacc.runradiation), axis=1)
+    key_df['copy_rad'] = key_df.apply(lambda x: copy_key(x['keys'],config.bigmacc.runradiation),axis=1)
+    # key_df.to_csv(r"C:\Users\justi\Desktop\test0.csv")
     return key_df
 
 def main(config):
     key_list = util.generate_key_list(config.bigmacc.strategies)
-    run_rad = config.bigmacc.runradiation
-    return rule_dataframe(key_list,run_rad)
+    # run_rad = config.bigmacc.runradiation
+    # return rule_dataframe(key_list,run_rad)
+    return rule_dataframe(config)
+
 
 if __name__ == '__main__':
     main(cea.config.Configuration())

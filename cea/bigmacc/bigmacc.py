@@ -17,8 +17,10 @@ import cea.datamanagement.archetypes_mapper
 import cea.datamanagement.data_initializer
 import cea.analysis.costs.system_costs
 import cea.analysis.lca.main
+import cea.demand.schedule_maker.schedule_maker as schedule_maker
 import cea.bigmacc.bigmacc_util as util
 import distutils
+import cea.technologies.solar.photovoltaic as photovoltaic
 from distutils import dir_util
 
 __author__ = "Justin McCarty"
@@ -47,6 +49,7 @@ def run(config):
     ## SCENARIO SETUP ---
     key_list = util.generate_key_list(config.bigmacc.strategies)
 
+
     # initialdf = pd.DataFrame(columns=['Experiments', 'Completed', 'Experiment Time', 'Unique Radiation'])
     # initialdf.to_csv(os.path.join(config.bigmacc.keys, 'logger.csv'))
 
@@ -55,60 +58,77 @@ def run(config):
         experiment_key = 'exp_{}'.format(i)
         print(experiment_key)
         if experiment_key in scen_check['Experiments'].values.tolist():
+            print('Experiment was finished previously, moving to next.')
             continue
+
         else:
             print('START: experiment {}.'.format(i))
             # INITIALIZE TIMER
             t0 = time.perf_counter()
 
-            cea.config.key = i
+            config.bigmacc.key = i
+            print(config.bigmacc.key)
+            if os.path.exists(os.path.join(config.bigmacc.keys, i)):
+                print(' - Folder exists for experiment {}.'.format(i))
+            else:
+                os.mkdir(os.path.join(config.bigmacc.keys, i))
+                print(' - Folder does not exist for experiment {}, creating now.'.format(i))
 
-            os.mkdir(os.path.join(config.bigmacc.keys, i))
             # run the archetype mapper to leverage the newly loaded typology file and set parameters
             print(' - Running archetype mapper for experiment {} to remove changes made in the last experiment.'.format(i))
-            try:
-                cea.datamanagement.archetypes_mapper.main(config)
-            except:
-                pass
+            cea.datamanagement.archetypes_mapper.main(config)
+
 
             # run the rule checker to set the scenario parameters
             print(' - Running rule checker for experiment {}.'.format(i))
-            try:
-                cea.bigmacc.bigmacc_rules.main(config)
-            except:
-                pass
+            cea.bigmacc.bigmacc_rules.main(config)
 
             ## SIMULATIONS ---
+            # checking on need for radiation simulation
             if config.bigmacc.runrad == True:
                 print(' - Running radiation simulation for experiment {}.'.format(i))
-                try:
+                if os.path.exists(locator.get_radiation_building('B000')):
+                    print(' - Radiation folder exists for experiment {}, using that.'.format(i))
+                else:
+                    print(' - Radiation running for experiment {}.'.format(i))
                     cea.resources.radiation_daysim.radiation_main.main(config)
-                except:
-                    pass
             else:
                 radfiles = config.bigmacc.copyrad
                 distutils.dir_util.copy_tree(radfiles, locator.get_solar_radiation_folder())
+                # shutil.copy(radfiles, locator.get_solar_radiation_folder())
                 print(' - Experiment {} does not require new radiation simulation.'.format(i))
 
+            # running demand forecasting
+
+            if os.path.exists(locator.get_schedule_model_file('B000')):
+                print(' - Schedules exist for experiment {}.'.format(i))
+            else:
+                print(' - Schedule maker running for experiment {}.'.format(i))
+                schedule_maker.main(config)
+
             print(' - Running demand simulation for experiment {}.'.format(i))
-            try:
-                cea.demand.demand_main.main(config)
-            except:
-                pass
+            cea.demand.demand_main.main(config)
 
 
-            try:
-                cea.analysis.costs.system_costs.main(config)
-                cea.analysis.lca.main.main(config)
-            except:
-                pass
-            ## STORE RESULT ---
+            # if PV simulation is needed, run it.
+            if config.bigmacc.pv == True:
+                print(' - Running radiation simulation for experiment {}.'.format(i))
+                photovoltaic.main(config)
+
+            # running the emissions and costing calculations
+            cea.analysis.costs.system_costs.main(config)
+            cea.analysis.lca.main.main(config)
+
 
             # clone out the simulation inputs and outputs directory
             print(' - Transferring results directory for experiment {}.'.format(i))
 
-            inputs_path = os.path.join(config.bigmacc.keys, i, 'inputs')
-            outputs_path = os.path.join(config.bigmacc.keys, i, 'outputs', 'data')
+            inputs_path = os.path.join(config.bigmacc.keys, i, config.general.scenario_name, 'inputs')
+            outputs_path = os.path.join(config.bigmacc.keys, i, config.general.scenario_name, 'outputs')
+            # costs_path = os.path.join(config.bigmacc.keys, i, 'outputs', 'data', 'costs')
+            # demand_path = os.path.join(config.bigmacc.keys, i, 'outputs', 'data', 'demand')
+            # emissions_path = os.path.join(config.bigmacc.keys, i, 'outputs', 'data', 'emissions')
+            # rad_path = os.path.join(config.bigmacc.keys, i, 'outputs', 'data', 'solar-radiation')
 
             distutils.dir_util.copy_tree(locator.get_data_results_folder(), outputs_path)
             distutils.dir_util.copy_tree(locator.get_input_folder(), inputs_path)
@@ -124,14 +144,15 @@ def run(config):
                                                      'Unique Radiation':config.bigmacc.runrad}, index = [0]), ignore_index = True)
             log_df.to_csv(os.path.join(config.bigmacc.keys, 'logger.csv'))
 
-            ## RESET FILES FOR NEXT ---
-            # cea.datamanagement.data_initializer.main(config)
-
             # delete results
-            shutil.rmtree(locator.get_data_results_folder())
+            shutil.rmtree(locator.get_costs_folder())
+            shutil.rmtree(locator.get_demand_results_folder())
+            shutil.rmtree(locator.get_lca_emissions_results_folder())
+            shutil.rmtree(locator.get_solar_radiation_folder())
             print('END: experiment {}. \n'.format(i))
 
 def main(config):
+    cea.datamanagement.data_initializer.main(config)
     run(config)
 
 if __name__ == '__main__':

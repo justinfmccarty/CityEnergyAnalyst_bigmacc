@@ -77,12 +77,20 @@ def log(config):
     log_df.to_csv(os.path.join(config.bigmacc.keys, 'logger.csv'))
 
 
+def check(config):
+    locator = cea.inputlocator.InputLocator(scenario=config.scenario)
+    for i in list(range(1,10)):
+        print('{} one'.format(i))
+        if os.path.exists(locator.get_schedule_model_folder()):
+            print('{} two'.format(i))
+            break
+        else:
+            print(i)
+    print('All')
+
+
 def main(config):
-    # set(config)
-    t0 = time.perf_counter()
-    log(config)
-    time_elapsed = time.perf_counter() - t0
-    print('done - time elapsed: %d.2 seconds' % time_elapsed)
+    key_df = pd.DataFrame(data={'keys': config.bigmacc.key})
 
 
 if __name__ == '__main__':

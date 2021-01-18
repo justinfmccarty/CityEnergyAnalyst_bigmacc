@@ -26,15 +26,14 @@ def has_heating_system(hvac_class_hs):
     :return: True, if the building has a (supported) heating system or False
     :rtype: bool
     """
-
-    supported = ['RADIATOR', 'FLOOR_HEATING', 'CENTRAL_AC']
+    supported = ['RADIATOR', 'FLOOR_HEATING', 'CENTRAL_AC', 'BASEBOARD']
     unsupported = ['NONE']
     if hvac_class_hs in supported:
         return True
     elif hvac_class_hs in unsupported:
         return False
     else:
-        raise ValueError('Invalid value for class_cs: %s. CEA only supports the following systems %s' % (
+        raise ValueError('Invalid value for class_hs: %s. CEA only supports the following systems %s' % (
             hvac_class_hs, supported.extend(unsupported)))
 
 

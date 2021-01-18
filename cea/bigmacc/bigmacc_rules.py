@@ -22,8 +22,8 @@ __status__ = ""
 
 def settemps_rule(df, config): # SETS FOR HEATING REDUCED 1C (20C TO 19C) AND SETS FOR COOLING RAISED 1C (24C TO 25C)
     locator = cea.inputlocator.InputLocator(config.scenario)
-    keys = [int(x) for x in str(cea.config.key)]
-
+    i = config.bigmacc.key
+    keys = [int(x) for x in str(i)]
     if keys[0]==1:
         from shutil import copyfile
         copyfile(locator.get_alt_use_type_properties(), locator.get_database_use_types_properties())
@@ -34,13 +34,13 @@ def settemps_rule(df, config): # SETS FOR HEATING REDUCED 1C (20C TO 19C) AND SE
 
 def greenroof_rule(df, config):  # ALL BUILDINGS GET GREEN ROOFS
     locator = cea.inputlocator.InputLocator(config.scenario)
-    keys = [int(x) for x in str(cea.config.key)]
-
+    i = config.bigmacc.key
+    keys = [int(x) for x in str(i)]
     if keys[1]==1:
         # in all buildings set type_roof = green_roof option
         arch_path = locator.get_building_architecture()
         arch = cea.utilities.dbf.dbf_to_dataframe(arch_path)
-        arch['type_roof'] = df['GR_roof'].values
+        arch['type_roof'] = str(df['GR_roof'].values.tolist()[0])
         cea.utilities.dbf.dataframe_to_dbf(arch, arch_path)
         print(' - Replacing type_roof with green roof construction for experiment {}.'.format(i))
     else:
@@ -49,8 +49,8 @@ def greenroof_rule(df, config):  # ALL BUILDINGS GET GREEN ROOFS
 
 def deepretrofit_rule(df, config): # EXISTING BUILDINGS HAVE DEEP WALL AND WINDOW RETROFIT (WWR REDUCED)
     locator = cea.inputlocator.InputLocator(config.scenario)
-    keys = [int(x) for x in str(cea.config.key)]
-
+    i = config.bigmacc.key
+    keys = [int(x) for x in str(i)]
     if keys[2] == 1:
         # in existing buildings set type_win, type_leak, type_wall = high_performance options
         typ_path = locator.get_building_typology()
@@ -60,14 +60,14 @@ def deepretrofit_rule(df, config): # EXISTING BUILDINGS HAVE DEEP WALL AND WINDO
         arch_path = locator.get_building_architecture()
         arch = cea.utilities.dbf.dbf_to_dataframe(arch_path)
         # arch['type_win'] = 'WINDOW_AS6'
-        arch.loc[arch.Name.isin(existing_bldgs), 'type_win'] = df['DR_win'].values  # triple glazing low-e two way
-        arch.loc[arch.Name.isin(existing_bldgs), 'type_leak'] = df['DR_leak'].values  # second least leaky
-        arch.loc[arch.Name.isin(existing_bldgs), 'type_wall'] = df['DR_wall'].values  # triple glazing low-e two way
+        arch.loc[arch.Name.isin(existing_bldgs), 'type_win'] = str(df['DR_win'].values.tolist()[0])  # triple glazing low-e two way
+        arch.loc[arch.Name.isin(existing_bldgs), 'type_leak'] = str(df['DR_leak'].values.tolist()[0])  # second least leaky
+        arch.loc[arch.Name.isin(existing_bldgs), 'type_wall'] = str(df['DR_wall'].values.tolist()[0])  # triple glazing low-e two way
 
-        arch.loc[arch.Name.isin(existing_bldgs), 'wwr_north'] = df['DR_wwr'].values
-        arch.loc[arch.Name.isin(existing_bldgs), 'wwr_east'] = df['DR_wwr'].values
-        arch.loc[arch.Name.isin(existing_bldgs), 'wwr_south'] = df['DR_wwr'].values
-        arch.loc[arch.Name.isin(existing_bldgs), 'wwr_west'] = df['DR_wwr'].values
+        arch.loc[arch.Name.isin(existing_bldgs), 'wwr_north'] = str(df['DR_wwr'].values.tolist()[0])
+        arch.loc[arch.Name.isin(existing_bldgs), 'wwr_east'] = str(df['DR_wwr'].values.tolist()[0])
+        arch.loc[arch.Name.isin(existing_bldgs), 'wwr_south'] = str(df['DR_wwr'].values.tolist()[0])
+        arch.loc[arch.Name.isin(existing_bldgs), 'wwr_west'] = str(df['DR_wwr'].values.tolist()[0])
 
 
         cea.utilities.dbf.dataframe_to_dbf(arch, arch_path)
@@ -79,35 +79,36 @@ def deepretrofit_rule(df, config): # EXISTING BUILDINGS HAVE DEEP WALL AND WINDO
 
 def passivehouse_rule(df, config): # NEW BUILD REQ PASSIVE
     locator = cea.inputlocator.InputLocator(config.scenario)
-    keys = [int(x) for x in str(cea.config.key)]
-
+    i = config.bigmacc.key
+    keys = [int(x) for x in str(i)]
     if keys[3] == 1:
         print(' - Setting all new construction to passive house standard for experiment {}.'.format(i))
 
         typ_path = locator.get_building_typology()
         typ = cea.utilities.dbf.dbf_to_dataframe(typ_path)
         new_bldgs = typ[typ['REFERENCE'] == 'new']['Name'].values.tolist()
+        existing_bldgs = typ[typ['REFERENCE'] == 'existing']['Name'].values.tolist()
 
         arch_path = locator.get_building_architecture()
         arch = cea.utilities.dbf.dbf_to_dataframe(arch_path)
 
-        arch.loc[arch.Name.isin(existing_bldgs), 'type_base'] = df['PH_base'].values
-        arch.loc[arch.Name.isin(existing_bldgs), 'type_leak'] = df['PH_leak'].values
-        arch.loc[arch.Name.isin(existing_bldgs), 'type_win'] = df['PH_win'].values
-        arch.loc[arch.Name.isin(existing_bldgs), 'type_roof'] = df['PH_roof'].values
-        arch.loc[arch.Name.isin(existing_bldgs), 'type_wall'] = df['PH_wall'].values
-        arch.loc[arch.Name.isin(existing_bldgs), 'type_floor'] = df['PH_floor'].values
-        arch.loc[arch.Name.isin(existing_bldgs), 'type_shade'] = df['PH_shade'].values
-        arch.loc[arch.Name.isin(existing_bldgs), 'type_part'] = df['PH_part'].values
-        arch.loc[arch.Name.isin(existing_bldgs), 'wwr_north'] = df['PH_wwr'].values
-        arch.loc[arch.Name.isin(existing_bldgs), 'wwr_east'] = df['PH_wwr'].values
-        arch.loc[arch.Name.isin(existing_bldgs), 'wwr_south'] = df['PH_wwr'].values
-        arch.loc[arch.Name.isin(existing_bldgs), 'wwr_west'] = df['PH_wwr'].values
+        arch.loc[arch.Name.isin(existing_bldgs), 'type_base'] = str(df['PH_base'].values.tolist()[0])
+        arch.loc[arch.Name.isin(existing_bldgs), 'type_leak'] = str(df['PH_leak'].values.tolist()[0])
+        arch.loc[arch.Name.isin(existing_bldgs), 'type_win'] = str(df['PH_win'].values.tolist()[0])
+        arch.loc[arch.Name.isin(existing_bldgs), 'type_roof'] = str(df['PH_roof'].values.tolist()[0])
+        arch.loc[arch.Name.isin(existing_bldgs), 'type_wall'] = str(df['PH_wall'].values.tolist()[0])
+        arch.loc[arch.Name.isin(existing_bldgs), 'type_floor'] = str(df['PH_floor'].values.tolist()[0])
+        arch.loc[arch.Name.isin(existing_bldgs), 'type_shade'] = str(df['PH_shade'].values.tolist()[0])
+        arch.loc[arch.Name.isin(existing_bldgs), 'type_part'] = str(df['PH_part'].values.tolist()[0])
+        arch.loc[arch.Name.isin(existing_bldgs), 'wwr_north'] = float(df['PH_wwr'].values.tolist()[0])
+        arch.loc[arch.Name.isin(existing_bldgs), 'wwr_east'] = float(df['PH_wwr'].values.tolist()[0])
+        arch.loc[arch.Name.isin(existing_bldgs), 'wwr_south'] = float(df['PH_wwr'].values.tolist()[0])
+        arch.loc[arch.Name.isin(existing_bldgs), 'wwr_west'] = float(df['PH_wwr'].values.tolist()[0])
 
         # check for green roof
         if keys[1] == 1:
             # in new buildings set roof_type to Passive+green roof
-            arch.loc[arch.Name.isin(new_bldgs), 'type_roof'] = df['PH_GR_roof'].values  #
+            arch.loc[arch.Name.isin(new_bldgs), 'type_roof'] = str(df['PH_GR_roof'].values.tolist()[0])  #
             cea.utilities.dbf.dataframe_to_dbf(arch, arch_path)
             print(' - Setting roof_type for passive+green roof for experiment {}.'.format(i))
 
@@ -120,8 +121,8 @@ def passivehouse_rule(df, config): # NEW BUILD REQ PASSIVE
 
 def heatpump_rule(df, config):  # NEW BUILD AND REFURBISHMENT/RETROFITS REQUIRE HEAT PUMP INSTALLATION (NO DISTRICT SERVICES)
     locator = cea.inputlocator.InputLocator(config.scenario)
-    keys = [int(x) for x in str(cea.config.key)]
-
+    i = config.bigmacc.key
+    keys = [int(x) for x in str(i)]
     if keys[4] == 1:
 
         air_con_path = locator.get_building_air_conditioning()
@@ -130,11 +131,11 @@ def heatpump_rule(df, config):  # NEW BUILD AND REFURBISHMENT/RETROFITS REQUIRE 
         supply_path = locator.get_building_supply()
         supply = cea.utilities.dbf.dbf_to_dataframe(supply_path)
         # in all buildings set HVAC_HEATING_AS4, HVAC_COOLING_AS5, SUPPLY_HEATING_AS7, SUPPLY_COOLING_AS1
-        air_con['type_cs'] = df['HP_hvac_cs'].values
-        air_con['type_hs'] = df['HP_hvac_hs'].values
-        supply['type_cs'] = df['HP_supply_cs'].values
-        supply['type_hs'] = df['HP_supply_hs'].values
-        supply['type_dhw'] = df['HP_supply_dhw'].values
+        air_con['type_cs'] = str(df['HP_hvac_cs'].values.tolist()[0])
+        air_con['type_hs'] = str(df['HP_hvac_hs'].values.tolist()[0])
+        supply['type_cs'] = str(df['HP_supply_cs'].values.tolist()[0])
+        supply['type_hs'] = str(df['HP_supply_hs'].values.tolist()[0])
+        supply['type_dhw'] = str(df['HP_supply_dhw'].values.tolist()[0])
 
         cea.utilities.dbf.dataframe_to_dbf(air_con, air_con_path)
         cea.utilities.dbf.dataframe_to_dbf(supply, supply_path)
@@ -146,8 +147,8 @@ def heatpump_rule(df, config):  # NEW BUILD AND REFURBISHMENT/RETROFITS REQUIRE 
 
 def masstimber_rule(df, config):  # NEW BUILD REQUIRES MASS TIMBER STRUCTURAL SYSTEMS
     locator = cea.inputlocator.InputLocator(config.scenario)
-    keys = [int(x) for x in str(cea.config.key)]
-
+    i = config.bigmacc.key
+    keys = [int(x) for x in str(i)]
     if keys[5] == 1:
         # in new buildings set type_cons = CONSTRUCTION_AS2
         typ_path = locator.get_building_typology()
@@ -157,7 +158,7 @@ def masstimber_rule(df, config):  # NEW BUILD REQUIRES MASS TIMBER STRUCTURAL SY
         arch_path = locator.get_building_architecture()
         arch = cea.utilities.dbf.dbf_to_dataframe(arch_path)
 
-        arch.loc[arch.Name.isin(new_bldgs), 'type_cons'] = df['MT_cons'].values  #
+        arch.loc[arch.Name.isin(new_bldgs), 'type_cons'] = str(df['MT_cons'].values.tolist()[0])  #
         cea.utilities.dbf.dataframe_to_dbf(arch, arch_path)
         # COMPUTE EMBODIED CARBON
         print(' - Setting type_cons to CONSTRUCTION_AS2 in experiment {}.'.format(i))
@@ -168,8 +169,8 @@ def masstimber_rule(df, config):  # NEW BUILD REQUIRES MASS TIMBER STRUCTURAL SY
 
 def seawater_rule(df, config):  # DISTRICT COOLING SYSTEM INSTALLED LINKED TO WRECK BEACH
     locator = cea.inputlocator.InputLocator(config.scenario)
-    keys = [int(x) for x in str(cea.config.key)]
-
+    i = config.bigmacc.key
+    keys = [int(x) for x in str(i)]
     if keys[6] == 1:
         # in all buildings set HVAC_HEATING_AS4, HVAC_COOLING_AS5, SUPPLY_HEATING_AS7, SUPPLY_COOLING_AS3
         air_con_path = locator.get_building_air_conditioning()
@@ -179,8 +180,8 @@ def seawater_rule(df, config):  # DISTRICT COOLING SYSTEM INSTALLED LINKED TO WR
         supply = cea.utilities.dbf.dbf_to_dataframe(supply_path)
         # in all buildings set HVAC_HEATING_AS4, HVAC_COOLING_AS5, SUPPLY_HEATING_AS7, SUPPLY_COOLING_AS1
 
-        air_con['type_cs'] = df['SW_hvac_cs'].values
-        supply['type_cs'] = df['SW_supply_cs'].values
+        air_con['type_cs'] = str(df['SW_hvac_cs'].values.tolist()[0])
+        supply['type_cs'] = str(df['SW_supply_cs'].values.tolist()[0])
 
         cea.utilities.dbf.dataframe_to_dbf(air_con, air_con_path)
         cea.utilities.dbf.dataframe_to_dbf(supply, supply_path)
@@ -194,9 +195,12 @@ def seawater_rule(df, config):  # DISTRICT COOLING SYSTEM INSTALLED LINKED TO WR
 
 def rooftoppv_rule(df, config):  # ALL BUILDINGS HAVE ROOFTOP PV INSTALLED
     locator = cea.inputlocator.InputLocator(config.scenario)
-    keys = [int(x) for x in str(config.bigmacc.key)]
+    i = config.bigmacc.key
+    keys = [int(x) for x in str(i)]
+    print(config.bigmacc.key)
 
     if keys[7] == 1:
+        cea.bigmacc.pv = 'True'
 
         arch_path = locator.get_building_architecture()
         arch = cea.utilities.dbf.dbf_to_dataframe(arch_path)
@@ -205,23 +209,23 @@ def rooftoppv_rule(df, config):  # ALL BUILDINGS HAVE ROOFTOP PV INSTALLED
         if keys[3] == 1:
             #check for green roof
             if keys[1] == 1: #PV+GR+PH
-                arch['type_roof'] = df['PV_GR_PH'].values
+                arch['type_roof'] = str(df['PV_GR_PH'].values.tolist()[0])
                 print(' - Setting roof_type and solar heat gain coefficient for PV+green+passive house roof for experiment {}.'.format(i))
-                config.bigmacc.heatgain = df['PV_GR_PH_hg'].values
+                config.bigmacc.heatgain = str(df['PV_GR_PH_hg'].values.tolist()[0])
             else: #PV+PH
-                arch['type_roof'] = df['PV_PH'].values
+                arch['type_roof'] = str(df['PV_PH'].values.tolist()[0])
                 print(' - Setting roof_type and solar heat gain coefficient for PV+passive house roof for experiment {}.'.format(i))
-                config.bigmacc.heatgain = df['PV_PH_hg'].values
+                config.bigmacc.heatgain = str(df['PV_PH_hg'].values.tolist()[0])
         else:
             # check for green roof
             if keys[1] == 1: #PV+GR+ST
-                arch['type_roof'] = df['PV_GR'].values
+                arch['type_roof'] = str(df['PV_GR'].values.tolist()[0])
                 print(' - Setting roof_type and solar heat gain coefficient for PV+green+standard roof for experiment {}.'.format(i))
-                config.bigmacc.heatgain = df['PV_GR_hg'].values
+                config.bigmacc.heatgain = str(df['PV_GR_hg'].values.tolist()[0])
             else: #PV+ST
-                arch['type_roof'] = df['PV'].values
+                arch['type_roof'] = str(df['PV'].values.tolist()[0])
                 print(' - Setting roof_type and solar heat gain coefficient for PV+standard roof for experiment {}.'.format(i))
-                config.bigmacc.heatgain = df['PV_hg'].values
+                config.bigmacc.heatgain = float(df['PV_hg'].values.tolist()[0])
 
             cea.utilities.dbf.dataframe_to_dbf(arch, arch_path)
     else:
@@ -231,7 +235,7 @@ def rooftoppv_rule(df, config):  # ALL BUILDINGS HAVE ROOFTOP PV INSTALLED
 
 def setrad_rule(df, config):
     config.bigmacc.runrad = df['run_rad'].values
-    config.bigmacc.copyrad = df['copy_rad'].values
+    config.bigmacc.copyrad = str(df['copy_rad'].values.tolist()[0])
 
 def rule_check(config):
     """
@@ -255,9 +259,11 @@ def rule_check(config):
     rooftoppv_rule(rules_df_sub,config) # 8
     setrad_rule(rules_df_sub, config)  # 9
 
-    return print('Where key ({}) triggered rules, actions were taken. Proceeding to simulation steps.'.format(key))
+    return print('Where key ({}) triggered rules, actions were taken. Proceeding to simulation steps.'.format(config.bigmacc.key))
 
 def main(config):
+    print('key in rules main')
+    print(config.bigmacc.key)
     rule_check(config)
 
 if __name__ == '__main__':

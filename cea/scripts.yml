@@ -473,11 +473,12 @@ BIGMACC:
     description: learning the config
     interfaces: [ cli, dashboard ]
     module: cea.bigmacc.bigmacc
-    parameters: [ 'general:scenario',
+    parameters: [ general,
                   bigmacc,
                   radiation,
                   demand,
-                  archetypes-mapper]
+                  archetypes-mapper,
+                  data-initializer]
     input-files:
       - [ get_zone_geometry ]
       - [ get_building_typology ]

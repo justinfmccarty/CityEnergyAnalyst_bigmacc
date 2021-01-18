@@ -54,3 +54,8 @@ def make_archive(source, destination):
 def un_zip(zipped_loc):
     with zipfile.ZipFile(os.path.join(zipped_loc + ".zip"), "r") as zip_ref:
         zip_ref.extractall(os.path.join(zipped_loc))
+
+def get_key(df):
+  key = df['experiments']
+  integer = str(key.split("_")[1])
+  return integer

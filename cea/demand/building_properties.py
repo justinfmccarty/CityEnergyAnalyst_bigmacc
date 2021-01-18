@@ -78,7 +78,6 @@ class BuildingProperties(object):
 
         # get temperatures of operation
         prop_HVAC_result = get_properties_technical_systems(locator, prop_hvac).set_index('Name')
-
         # get envelope properties
         prop_envelope = get_envelope_properties(locator, prop_architectures).set_index('Name')
 
@@ -731,6 +730,7 @@ def get_properties_technical_systems(locator, prop_HVAC):
     prop_ventilation_system_and_control = pd.read_excel(locator.get_database_air_conditioning_systems(), 'VENTILATION')
 
     df_emission_heating = prop_HVAC.merge(prop_emission_heating, left_on='type_hs', right_on='code')
+
     df_emission_cooling = prop_HVAC.merge(prop_emission_cooling, left_on='type_cs', right_on='code')
     df_emission_control_heating_and_cooling = prop_HVAC.merge(prop_emission_control_heating_and_cooling,
                                                               left_on='type_ctrl', right_on='code')
@@ -748,7 +748,6 @@ def get_properties_technical_systems(locator, prop_HVAC):
     fields_emission_control_heating_and_cooling = ['Name', 'dT_Qhs', 'dT_Qcs']
     fields_emission_dhw = ['Name', 'Tsww0_C', 'Qwwmax_Wm2']
     fields_system_ctrl_vent = ['Name', 'MECH_VENT', 'WIN_VENT', 'HEAT_REC', 'NIGHT_FLSH', 'ECONOMIZER']
-
     result = df_emission_heating[fields_emission_heating].merge(df_emission_cooling[fields_emission_cooling],
                                                                 on='Name').merge(
         df_emission_control_heating_and_cooling[fields_emission_control_heating_and_cooling],
