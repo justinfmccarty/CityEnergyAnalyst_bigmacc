@@ -161,7 +161,7 @@ def run(config):
 
 def main(config):
 
-
+    print('STARTING UP THE BIGMACC SCRIPT')
     cea.datamanagement.data_initializer.main(config)
     key_list = util.generate_key_list(config)
 
