@@ -154,7 +154,7 @@ def run(config):
 
 def main(config):
     cea.datamanagement.data_initializer.main(config)
-    key_list = util.generate_key_list(config.bigmacc.strategies)
+    key_list = util.generate_key_list(config)
 
     if os.path.exists(os.path.join(config.bigmacc.keys, 'logger.csv')):
         pass

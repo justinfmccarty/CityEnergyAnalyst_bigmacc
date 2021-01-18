@@ -7,6 +7,7 @@ NOTE: ADD YOUR SCRIPT'S DOCUMENTATION HERE (what, why, include literature refere
 # import cea.bigmacc.bigmacc_util as util
 import cea.resources.radiation_daysim.radiation_main
 import os
+import itertools
 import time
 import cea.inputlocator
 import cea.config
@@ -90,7 +91,7 @@ def check(config):
 
 
 def main(config):
-    key_df = pd.DataFrame(data={'keys': config.bigmacc.key})
+    print(util.generate_key_list(config))
 
 
 if __name__ == '__main__':

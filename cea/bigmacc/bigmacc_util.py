@@ -17,14 +17,18 @@ __email__ = ""
 __status__ = ""
 
 
-def generate_key_list(n):
+def generate_key_list(config):
     # https://stackoverflow.com/questions/14931769/how-to-get-all-combination-of-n-binary-value
     key_list = []
-    elements = [list(i) for i in itertools.product([0, 1], repeat=n)]
+    elements = [list(i) for i in itertools.product([0, 1], repeat=config.bigmacc.strategies)]
     for key in elements:
         result = ''.join(str(i) for i in key)
         key_list.append(result)
-    return key_list
+
+    rad_list = config.bigmacc.runradiation
+    shorter_list = [x for x in key_list if x not in rad_list]
+    rad_list.extend(shorter_list)
+    return rad_list
 
 
 def change_key(key):
