@@ -153,6 +153,11 @@ def run(config):
 
 
 def main(config):
+    import logging
+
+    numba_logger = logging.getLogger('numba')
+    numba_logger.setLevel(logging.WARNING)
+
     cea.datamanagement.data_initializer.main(config)
     key_list = util.generate_key_list(config)
 

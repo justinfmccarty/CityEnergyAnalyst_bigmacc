@@ -234,6 +234,7 @@ def rooftoppv_rule(df, config):  # ALL BUILDINGS HAVE ROOFTOP PV INSTALLED
 
     if keys[7] == 1:
         config.bigmacc.pv = 'True'
+        print(' - Setting run PV to True.')
         config.radiation.write_sensor_data = True
         print(' - Setting write-sensor-data to True.')
 
@@ -264,6 +265,8 @@ def rooftoppv_rule(df, config):  # ALL BUILDINGS HAVE ROOFTOP PV INSTALLED
 
             cea.utilities.dbf.dataframe_to_dbf(arch, arch_path)
     else:
+        config.bigmacc.pv = 'False'
+        print(' - Setting run PV to False.')
         config.radiation.write_sensor_data = False
         print(' - Setting write-sensor-data to False.')
         print(' - Experiment {} does not have rooftop solar.'.format(i))
