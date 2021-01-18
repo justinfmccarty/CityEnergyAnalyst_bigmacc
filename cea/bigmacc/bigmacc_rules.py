@@ -202,7 +202,7 @@ def seawater_rule(df, config):  # DISTRICT COOLING SYSTEM INSTALLED LINKED TO WR
     i = config.bigmacc.key
     keys = [int(x) for x in str(i)]
     if keys[6] == 1:
-        config.bigmacc.water = 'True'
+        config.bigmacc.water = True
         # in all buildings set HVAC_HEATING_AS4, HVAC_COOLING_AS5, SUPPLY_HEATING_AS7, SUPPLY_COOLING_AS3
         air_con_path = locator.get_building_air_conditioning()
         air_con = cea.utilities.dbf.dbf_to_dataframe(air_con_path)
@@ -233,7 +233,7 @@ def rooftoppv_rule(df, config):  # ALL BUILDINGS HAVE ROOFTOP PV INSTALLED
     print(config.bigmacc.key)
 
     if keys[7] == 1:
-        config.bigmacc.pv = 'True'
+        config.bigmacc.pv = True
         print(' - Setting run PV to True.')
         config.radiation.write_sensor_data = True
         print(' - Setting write-sensor-data to True.')
@@ -265,7 +265,7 @@ def rooftoppv_rule(df, config):  # ALL BUILDINGS HAVE ROOFTOP PV INSTALLED
 
             cea.utilities.dbf.dataframe_to_dbf(arch, arch_path)
     else:
-        config.bigmacc.pv = 'False'
+        config.bigmacc.pv = False
         print(' - Setting run PV to False.')
         config.radiation.write_sensor_data = False
         print(' - Setting write-sensor-data to False.')

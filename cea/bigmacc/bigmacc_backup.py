@@ -81,6 +81,8 @@ def run(config):
 
         # SIMULATIONS ---
 
+        print(' - Run radiation is {}.'.format(config.bigmacc.runrad))
+        print(' - Write sensor data is {}.'.format(config.radiation.write_sensor_data))
         # checking on need for radiation simulation
         if config.bigmacc.runrad == True:
             print(' - Running radiation simulation for experiment {}.'.format(i))
@@ -106,11 +108,13 @@ def run(config):
         print(' - Running demand simulation for experiment {}.'.format(i))
         cea.demand.demand_main.main(config)
 
+        print(' - Run PV is {}.'.format(config.bigmacc.pv))
         # if PV simulation is needed, run it.
         if config.bigmacc.pv == True:
             print(' - Running radiation simulation for experiment {}.'.format(i))
             photovoltaic.main(config)
 
+        print('Run water-body exchange is {}.'.format(config.bigmacc.water))
         # if water-body simulation is needed, run it.
         if config.bigmacc.water == True:
             print(' - Running radiation simulation for experiment {}.'.format(i))
@@ -153,10 +157,7 @@ def run(config):
 
 
 def main(config):
-    import logging
 
-    numba_logger = logging.getLogger('numba')
-    numba_logger.setLevel(logging.WARNING)
 
     cea.datamanagement.data_initializer.main(config)
     key_list = util.generate_key_list(config)

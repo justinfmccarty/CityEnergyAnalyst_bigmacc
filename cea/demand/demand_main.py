@@ -7,7 +7,7 @@ import os
 import time
 import warnings
 from itertools import repeat
-
+import logging
 import cea.config
 import cea.inputlocator
 import cea.utilities.parallel
@@ -63,6 +63,9 @@ def demand_calculation(locator, config):
         Applied Energy 142 (2015): 247–265.
     """
 
+
+    numba_logger = logging.getLogger('numba')
+    numba_logger.setLevel(logging.WARNING)
     # INITIALIZE TIMER
     t0 = time.perf_counter()
 
@@ -136,6 +139,7 @@ def print_progress(i, n, args, _):
 
 
 def main(config):
+
     assert os.path.exists(config.scenario), 'Scenario not found: %s' % config.scenario
     locator = cea.inputlocator.InputLocator(scenario=config.scenario)
     print('Running demand calculation for scenario %s' % config.scenario)
