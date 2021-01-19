@@ -157,6 +157,11 @@ def run(config):
         shutil.rmtree(locator.get_lca_emissions_results_folder())
         shutil.rmtree(locator.get_solar_radiation_folder())
         shutil.rmtree(locator.get_potentials_folder())
+        keys = [int(x) for x in str(i)]
+        if keys[0] == 1:
+            cea.datamanagement.data_initializer.main(config)
+        else:
+            pass
         print('END: experiment {}. \n'.format(i))
 
 

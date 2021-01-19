@@ -112,7 +112,34 @@ def main(config):
     # usetype_IL.to_excel(writer, sheet_name='INTERNAL_LOADS')
     writer.save()
 
+def testif(config):
+    # exp_01011111
+    # exp_01100010
+
+    keys3 = 0
+    keys1 = 1
+    if keys3 == 1:
+        # check for green roof
+        if keys1 == 1:  # PV+GR+PH
+            print('PV+GR+PH')
+
+            print('Writing File')
+        else:  # PV+PH
+            print('PV+PH')
+
+            print('Writing File')
+    else:
+        # check for green roof
+        if keys1 == 1:  # PV+GR+ST
+            print('PV+GR+ST')
+
+            print('Writing File')
+        else:  # PV+ST
+            print('PV+ST')
+
+            print('Writing File')
+
 
 
 if __name__ == '__main__':
-    main(cea.config.Configuration())
+    testif(cea.config.Configuration())

@@ -31,7 +31,7 @@ def settemps_rule(df, config): # SETS FOR HEATING REDUCED 1C (20C TO 19C) AND SE
         # copyfile(locator.get_alt_use_type_properties(), locator.get_database_use_types_properties())
         usetype_path = locator.get_database_use_types_properties()
         usetype_IC = pd.read_excel(usetype_path, sheet_name='INDOOR_COMFORT')
-        # usetype_IL = pd.read_excel(usetype_path, sheet_name='INTERNAL_LOADS')
+        usetype_IL = pd.read_excel(usetype_path, sheet_name='INTERNAL_LOADS')
         usetype_IC['Tcs_set_C'] = usetype_IC['Tcs_set_C'] + df['SP_cool'].values.tolist()[0]
         usetype_IC['Ths_set_C'] = usetype_IC['Ths_set_C'] + df['SP_heat'].values.tolist()[0]
         usetype_IC['Tcs_setb_C'] = usetype_IC['Tcs_setb_C'] + df['SP_cool'].values.tolist()[0]
@@ -42,7 +42,7 @@ def settemps_rule(df, config): # SETS FOR HEATING REDUCED 1C (20C TO 19C) AND SE
 
         # Write each dataframe to a different worksheet.
         usetype_IC.to_excel(writer, sheet_name='INDOOR_COMFORT')
-        # usetype_IL.to_excel(writer, sheet_name='INTERNAL_LOADS')
+        usetype_IL.to_excel(writer, sheet_name='INTERNAL_LOADS')
         writer.save()
         print(' - Replacing set temperatures for experiment {}.'.format(i))
     else:
@@ -128,8 +128,6 @@ def passivehouse_rule(df, config): # NEW BUILD REQ PASSIVE
         air_con_path = locator.get_building_air_conditioning()
         air_con = cea.utilities.dbf.dbf_to_dataframe(air_con_path)
         air_con.loc[air_con.Name.isin(new_bldgs), 'type_cs'] = str(df['PH_hvac_cs'].values.tolist()[0])
-
-        cea.utilities.dbf.dataframe_to_dbf(air_con, air_con_path)
 
         print(' - Initial passive house types set for Experiment {}.'.format(i))
         # check for green roof
@@ -264,22 +262,32 @@ def rooftoppv_rule(df, config):  # ALL BUILDINGS HAVE ROOFTOP PV INSTALLED
                 arch['type_roof'] = str(df['PV_GR_PH'].values.tolist()[0])
                 print(' - Setting roof_type and solar heat gain coefficient for PV+green+passive house roof for experiment {}.'.format(i))
                 config.bigmacc.heatgain = str(df['PV_GR_PH_hg'].values.tolist()[0])
+                # config.bigmacc.heatgain is used in building_properties as a coefficient to change sensible gain on all roofs
+
+                cea.utilities.dbf.dataframe_to_dbf(arch, arch_path)
             else: #PV+PH
                 arch['type_roof'] = str(df['PV_PH'].values.tolist()[0])
                 print(' - Setting roof_type and solar heat gain coefficient for PV+passive house roof for experiment {}.'.format(i))
                 config.bigmacc.heatgain = str(df['PV_PH_hg'].values.tolist()[0])
+                # config.bigmacc.heatgain is used in building_properties as a coefficient to change sensible gain on all roofs
+
+                cea.utilities.dbf.dataframe_to_dbf(arch, arch_path)
         else:
             # check for green roof
             if keys[1] == 1: #PV+GR+ST
                 arch['type_roof'] = str(df['PV_GR'].values.tolist()[0])
                 print(' - Setting roof_type and solar heat gain coefficient for PV+green+standard roof for experiment {}.'.format(i))
                 config.bigmacc.heatgain = str(df['PV_GR_hg'].values.tolist()[0])
+                # config.bigmacc.heatgain is used in building_properties as a coefficient to change sensible gain on all roofs
+
+                cea.utilities.dbf.dataframe_to_dbf(arch, arch_path)
             else: #PV+ST
                 arch['type_roof'] = str(df['PV'].values.tolist()[0])
                 print(' - Setting roof_type and solar heat gain coefficient for PV+standard roof for experiment {}.'.format(i))
                 config.bigmacc.heatgain = float(df['PV_hg'].values.tolist()[0])
+                # config.bigmacc.heatgain is used in building_properties as a coefficient to change sensible gain on all roofs
 
-            cea.utilities.dbf.dataframe_to_dbf(arch, arch_path)
+                cea.utilities.dbf.dataframe_to_dbf(arch, arch_path)
     else:
         config.bigmacc.pv = False
         print(' - Setting run PV to False.')
@@ -287,6 +295,8 @@ def rooftoppv_rule(df, config):  # ALL BUILDINGS HAVE ROOFTOP PV INSTALLED
         print(' - Setting write-sensor-data to False.')
         print(' - Experiment {} does not have rooftop solar.'.format(i))
         config.bigmacc.heatgain = 0.0
+        # config.bigmacc.heatgain is used in building_properties as a coefficient to change sensible gain on all roofs
+
     return print(' - Rule for rooftop PV use checked')
 
 def setrad_rule(df, config):
