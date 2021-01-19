@@ -5,6 +5,7 @@ This is run in the main script (bigmacc.py) after the archetype-mapping and befo
 
 
 import os
+import pandas as pd
 import cea.config
 import cea.inputlocator
 import cea.utilities.dbf
@@ -27,7 +28,22 @@ def settemps_rule(df, config): # SETS FOR HEATING REDUCED 1C (20C TO 19C) AND SE
     keys = [int(x) for x in str(i)]
     if keys[0]==1:
         from shutil import copyfile
-        copyfile(locator.get_alt_use_type_properties(), locator.get_database_use_types_properties())
+        # copyfile(locator.get_alt_use_type_properties(), locator.get_database_use_types_properties())
+        usetype_path = locator.get_database_use_types_properties()
+        usetype_IC = pd.read_excel(usetype_path, sheet_name='INDOOR_COMFORT')
+        # usetype_IL = pd.read_excel(usetype_path, sheet_name='INTERNAL_LOADS')
+        usetype_IC['Tcs_set_C'] = usetype_IC['Tcs_set_C'] + df['SP_cool'].values.tolist()[0]
+        usetype_IC['Ths_set_C'] = usetype_IC['Ths_set_C'] + df['SP_heat'].values.tolist()[0]
+        usetype_IC['Tcs_setb_C'] = usetype_IC['Tcs_setb_C'] + df['SP_cool'].values.tolist()[0]
+        usetype_IC['Ths_setb_C'] = usetype_IC['Ths_setb_C'] + df['SP_heat'].values.tolist()[0]
+
+        # Create a Pandas Excel writer using XlsxWriter as the engine.
+        writer = pd.ExcelWriter(locator.get_database_use_types_properties(), engine='xlsxwriter')
+
+        # Write each dataframe to a different worksheet.
+        usetype_IC.to_excel(writer, sheet_name='INDOOR_COMFORT')
+        # usetype_IL.to_excel(writer, sheet_name='INTERNAL_LOADS')
+        writer.save()
         print(' - Replacing set temperatures for experiment {}.'.format(i))
     else:
         print(' - Experiment {} does not use altered set temperatures.'.format(i))

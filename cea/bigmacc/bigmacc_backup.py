@@ -149,6 +149,7 @@ def run(config):
                                              'Experiment Time': '%d.2 seconds' % time_elapsed,
                                              'Unique Radiation': config.bigmacc.runrad}, index=[0]), ignore_index=True)
         log_df.to_csv(os.path.join(config.bigmacc.keys, 'logger.csv'))
+        log_df.to_csv(r"C:\Users\justi\Desktop\126logger_backup.csv",)
 
         # delete results
         shutil.rmtree(locator.get_costs_folder())
@@ -170,7 +171,6 @@ def main(config):
     else:
         initialdf = pd.DataFrame(columns=['Experiments', 'Completed', 'Experiment Time', 'Unique Radiation'])
         initialdf.to_csv(os.path.join(config.bigmacc.keys, 'logger.csv'))
-        initialdf = []
 
     for i in key_list:
         config.bigmacc.key = i

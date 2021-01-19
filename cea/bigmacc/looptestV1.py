@@ -7,6 +7,7 @@ NOTE: ADD YOUR SCRIPT'S DOCUMENTATION HERE (what, why, include literature refere
 # import cea.bigmacc.bigmacc_util as util
 import cea.resources.radiation_daysim.radiation_main
 import os
+import xlsxwriter
 import itertools
 import time
 import cea.inputlocator
@@ -91,7 +92,26 @@ def check(config):
 
 
 def main(config):
-    print(util.generate_key_list(config))
+    rules_df = cea.bigmacc.create_rule_dataframe.main(config)
+    df = rules_df[rules_df['keys'] == config.bigmacc.key]
+    locator = cea.inputlocator.InputLocator(scenario=config.scenario)
+
+    usetype_path = locator.get_database_use_types_properties()
+    usetype_IC = pd.read_excel(usetype_path, sheet_name='INDOOR_COMFORT')
+    # usetype_IL = pd.read_excel(usetype_path, sheet_name='INTERNAL_LOADS')
+    usetype_IC['Tcs_set_C'] = usetype_IC['Tcs_set_C'] + df['SP_cool'].values.tolist()[0]
+    usetype_IC['Ths_set_C'] = usetype_IC['Ths_set_C'] + df['SP_heat'].values.tolist()[0]
+    usetype_IC['Tcs_setb_C'] = usetype_IC['Tcs_setb_C'] + df['SP_cool'].values.tolist()[0]
+    usetype_IC['Ths_setb_C'] = usetype_IC['Ths_setb_C'] + df['SP_heat'].values.tolist()[0]
+
+    # Create a Pandas Excel writer using XlsxWriter as the engine.
+    writer = pd.ExcelWriter(locator.get_database_use_types_properties(), engine='xlsxwriter')
+
+    # Write each dataframe to a different worksheet.
+    usetype_IC.to_excel(writer, sheet_name='INDOOR_COMFORT')
+    # usetype_IL.to_excel(writer, sheet_name='INTERNAL_LOADS')
+    writer.save()
+
 
 
 if __name__ == '__main__':
