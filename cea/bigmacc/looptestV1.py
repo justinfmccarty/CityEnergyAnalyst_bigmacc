@@ -116,28 +116,28 @@ def testif(config):
     # exp_01011111
     # exp_01100010
 
-    keys3 = 0
-    keys1 = 1
+    keys3 = 1
+    keys1 = 0
     if keys3 == 1:
         # check for green roof
         if keys1 == 1:  # PV+GR+PH
             print('PV+GR+PH')
 
-            print('Writing File')
+            # print('Writing File')
         else:  # PV+PH
             print('PV+PH')
 
-            print('Writing File')
+            # print('Writing File')
     else:
         # check for green roof
         if keys1 == 1:  # PV+GR+ST
             print('PV+GR+ST')
 
-            print('Writing File')
+            # print('Writing File')
         else:  # PV+ST
             print('PV+ST')
 
-            print('Writing File')
+        print('Writing File')
 
 
 
