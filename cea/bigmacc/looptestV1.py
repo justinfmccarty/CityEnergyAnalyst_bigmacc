@@ -15,11 +15,11 @@ import cea.config
 import distutils
 from distutils import dir_util
 import pandas as pd
-# import cea.inputlocator
-# import cea.demand.demand_main
-# import cea.resources.radiation_daysim.radiation_main
-# import cea.bigmacc.copy_results
-# import cea.datamanagement.archetypes_mapper
+import cea.utilities
+import cea.demand.demand_main
+import cea.resources.radiation_daysim.radiation_main
+import cea.bigmacc.copy_results
+import cea.datamanagement.archetypes_mapper
 import zipfile
 
 import cea.bigmacc.bigmacc_util as util
@@ -139,7 +139,28 @@ def testif(config):
 
         print('Writing File')
 
+def checkscen(config):
+
+    locator = cea.inputlocator.InputLocator(scenario=config.scenario)
+
+    air_con_path = locator.get_building_air_conditioning()
+    air_con = cea.utilities.dbf.dbf_to_dataframe(air_con_path)
+
+    supply_path = locator.get_building_supply()
+    supply = cea.utilities.dbf.dbf_to_dataframe(supply_path)
+
+    df = supply.merge(air_con, on='Name')
+
+    supply = df[['Name','type_cs_x','type_hs_x','type_dhw_x','type_el']]
+    supply = supply.rename(columns={'type_cs_x':'type_cs','type_hs_x':'type_hs','type_dhw_x':'type_dhw'})
+
+    air_con = df[['Name','type_cs_y','type_hs_y','type_dhw_y','type_ctrl','type_vent','heat_starts','heat_ends','cool_starts','cool_ends']]
+    air_con = air_con.rename(columns={'type_cs_y':'type_cs','type_hs_y':'type_hs','type_dhw_y':'type_dhw'})
+    # df.to_csv(r"C:\Users\justi\Desktop\test1.csv")
+    cea.utilities.dbf.dataframe_to_dbf(air_con, r"C:\Users\justi\Desktop\air_con.dbf")
+    cea.utilities.dbf.dataframe_to_dbf(supply, r"C:\Users\justi\Desktop\supply.dbf")
+
 
 
 if __name__ == '__main__':
-    testif(cea.config.Configuration())
+    checkscen(cea.config.Configuration())

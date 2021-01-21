@@ -21,6 +21,10 @@ __email__ = ""
 __status__ = ""
 
 
+def nec_cs_rule(nec_cs_value):
+    return nec_cs_value
+
+
 def runrad_rule(key, run_list):  # SETS FOR HEATING REDUCED 1C (20C TO 19C) AND SETS FOR COOLING RAISED 1C (24C TO 25C)
     if key in run_list:
         return True
@@ -160,6 +164,10 @@ def rule_dataframe(config):
     key_df = pd.DataFrame()
     key_df['keys'] = pd.Series(config.bigmacc.key)
     key_df['experiments'] = key_df['keys'].apply(lambda x: 'exp_{}'.format(x))
+
+    key_df['NEC_hvac_cs_nat_vent'] = key_df.apply(lambda x: nec_cs_rule('HVAC_COOLING_AS7'), axis=1)
+    key_df['NEC_hvac_cs_mech_vent'] = key_df.apply(lambda x: nec_cs_rule('HVAC_COOLING_AS3'), axis=1)
+    key_df['NEC_supply_cs'] = key_df.apply(lambda x: nec_cs_rule('SUPPLY_COOLING_AS5'), axis=1)
 
     key_df['SP_heat'] = key_df.apply(lambda x: SP_rule(x['keys'], -1), axis=1)
     key_df['SP_cool'] = key_df.apply(lambda x: SP_rule(x['keys'], 1), axis=1)

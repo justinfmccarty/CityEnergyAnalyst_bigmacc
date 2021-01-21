@@ -7,6 +7,7 @@ This is run in the main script (bigmacc.py) after the archetype-mapping and befo
 import os
 import pandas as pd
 import cea.config
+import numpy as np
 import cea.inputlocator
 import cea.utilities.dbf
 import cea.bigmacc.create_rule_dataframe
@@ -20,6 +21,34 @@ __maintainer__ = ""
 __email__ = ""
 __status__ = ""
 
+
+def necessary_cooling_hvac(service_df, val1, val2, val3):
+
+    # check for existing cooling system
+    if service_df['type_cs_y'] == 'HVAC_COOLING_AS0':
+        # check for window ventilation
+        if service_df['type_vent'] == 'HVAC_VENTILATION_AS0':
+            return val1
+        elif service_df['type_vent'] == 'HVAC_VENTILATION_AS3':
+            return val1
+        else:
+            return val3
+    else:
+        return service_df['type_cs_y']
+
+def necessary_cooling_supply(service_df, val1, val2, val3):
+
+    # check for existing cooling system
+    if service_df['type_cs_y'] == 'HVAC_COOLING_AS0':
+        # check for window ventilation
+        if service_df['type_vent'] == 'HVAC_VENTILATION_AS0':
+            return val2
+        elif service_df['type_vent'] == 'HVAC_VENTILATION_AS3':
+            return val2
+        else:
+            return val2
+    else:
+        return service_df['type_cs_x']
 
 def settemps_rule(df, config): # SETS FOR HEATING REDUCED 1C (20C TO 19C) AND SETS FOR COOLING RAISED 1C (24C TO 25C)
     print('---- CHECKING SETPOINT RULE ----')
@@ -92,6 +121,47 @@ def deepretrofit_rule(df, config): # EXISTING BUILDINGS HAVE DEEP WALL AND WINDO
         arch.to_csv(r"C:\Users\justi\Desktop\test0.csv")
         cea.utilities.dbf.dataframe_to_dbf(arch, arch_path)
         print(' - Replacing type_win, type_leak, type_wall with high performance retrofits and reducing WWR to 20% for experiment {}.'.format(i))
+
+        pathway_code = config.general.parent
+        pathway_items = pathway_code.split('_')
+        year = int(pathway_items[1])
+        pathway = pathway_items[2]
+
+        print('---- CHECKING FOR DANGEROUS WARMING ----')
+        if pathway == 'ssp585':
+            if year > 2060:
+                print(' - Experiment {} is entering a period of high warming and all buildings wil require cooling.'.format(i))
+                air_con_path = locator.get_building_air_conditioning()
+                air_con = cea.utilities.dbf.dbf_to_dataframe(air_con_path)
+                supply_path = locator.get_building_supply()
+                supply = cea.utilities.dbf.dbf_to_dataframe(supply_path)
+
+                val1 = str(df['NEC_hvac_cs_nat_vent'].values.tolist()[0]) #HVAC_COOLING_AS7
+                val2 = str(df['NEC_supply_cs'].values.tolist()[0]) #SUPPLY_COOLING_AS5
+                val3 = str(df['NEC_hvac_cs_mech_vent'].values.tolist()[0]) #HVAC_COOLING_AS3
+
+                service_df = supply.merge(air_con, on='Name')
+                service_df['type_cs_y'] = service_df.apply(lambda x: necessary_cooling_hvac(x,
+                                                                               val1,
+                                                                               val2,
+                                                                               val3),axis=1)
+                service_df['type_cs_x'] = service_df.apply(lambda x: necessary_cooling_supply(x,
+                                                                               val1,
+                                                                               val2,
+                                                                               val3), axis=1)
+                supply = service_df[['Name', 'type_cs_x', 'type_hs_x', 'type_dhw_x', 'type_el']]
+                supply = supply.rename(columns={'type_cs_x': 'type_cs', 'type_hs_x': 'type_hs', 'type_dhw_x': 'type_dhw'})
+
+                air_con = service_df[['Name', 'type_cs_y', 'type_hs_y', 'type_dhw_y', 'type_ctrl', 'type_vent', 'heat_starts','heat_ends', 'cool_starts', 'cool_ends']]
+                air_con = air_con.rename(columns={'type_cs_y': 'type_cs', 'type_hs_y': 'type_hs', 'type_dhw_y': 'type_dhw'})
+                air_con['insert'] = 'testvalue'
+
+                cea.utilities.dbf.dataframe_to_dbf(air_con, air_con_path)
+                cea.utilities.dbf.dataframe_to_dbf(supply, supply_path)
+            else:
+                print(' - Pathway {} detected is on the higher end of warming but the time period {} does not warrant increased cooling service.'.format(pathway, year))
+        else:
+            print(' - Pathway {} detected is not in the range to warrant increased cooling service.'.format(pathway))
     else:
         print(' - Experiment {} does not implement out of ordinary wall and window constructions.'.format(i))
     return print(' - Retrofit rule has been checked.')
@@ -315,6 +385,7 @@ def rule_check(config):
     rules_df = cea.bigmacc.create_rule_dataframe.main(config)
     rules_df_sub = rules_df[rules_df['keys'] == config.bigmacc.key]
 
+    # necessary_cooling(rules_df_sub, config)  # 0 not needed only occurs under deep retrofits
     settemps_rule(rules_df_sub,config) # 1
     greenroof_rule(rules_df_sub,config) # 2
     deepretrofit_rule(rules_df_sub,config) # 3
