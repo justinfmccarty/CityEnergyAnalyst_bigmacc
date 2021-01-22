@@ -492,21 +492,12 @@ BIGMACC:
     description: the base for the eta lab workflow
     interfaces: [cli, dashboard]
     module: cea.bigmacc.looptestV1
-    parameters: [ 'general:project',
-                  'general:multiprocessing',
-                  'general:number-of-cpus-to-keep-free',
-                  'general:debug',
+    parameters: [ general,
                   radiation,
                   demand,
-                  'general:scenario',
                   weather-helper,
                   archetypes-mapper,
-                  'bigmacc:keys',
-                  'bigmacc:key',
-                  'bigmacc:runradiation',
-                  'bigmacc:copyrad',
-                  'bigmacc:runrad',
-                  'bigmacc:strategies']
+                  bigmacc]
     input-files:
       - [ get_zone_geometry ]
       - [ get_building_typology ]
