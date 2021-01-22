@@ -56,8 +56,7 @@ def edit_typology(config):
         new_df = pd.DataFrame()
         print('Year designation is incorrect')
 
-    # # new_df.to_csv(r"C:\Users\justi\Desktop\test1.csv")
-    # # cea.utilities.dbf.dataframe_to_dbf(typ, typ_path)
+    cea.utilities.dbf.dataframe_to_dbf(new_df, typ_path)
     return print(' - Typology file fixed')
 
 
@@ -68,14 +67,13 @@ def run_changes(proj, config):
     for name in keys:
         print(' - - Editing typology file for project-{}.'.format(name))
         config.general.project = os.path.join(r'F:\BIGMACC_WESBROOK\Projects', proj, name)
-        # config.general.scenario_name = os.path.join(name, 'initial')
 
         edit_typology(config)
 
         print(' - - Running system-costs and lca emissions for project-{}.'.format(name))
-        # # running the emissions and costing calculations
-        # cea.analysis.costs.system_costs.main(config)
-        # cea.analysis.lca.main.main(config)
+        # running the emissions and costing calculations
+        cea.analysis.costs.system_costs.main(config)
+        cea.analysis.lca.main.main(config)
         print(' - Switch to next project.')
 
 
