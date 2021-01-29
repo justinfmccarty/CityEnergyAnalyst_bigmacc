@@ -5,9 +5,9 @@ NOTE: ADD YOUR SCRIPT'S DOCUMENTATION HERE (what, why, include literature refere
 """
 
 import os
-
+import time
 import pandas as pd
-
+import cea.datamanagement.data_initializer
 import cea.analysis.costs.system_costs
 import cea.analysis.lca.main
 import cea.bigmacc.copy_results
@@ -32,6 +32,7 @@ __status__ = ""
 
 
 def edit_typology(config):
+    print(config.general.project)
     edit_typ_path = config.bigmacc.changes
     years_2050 = pd.read_excel(edit_typ_path, sheet_name='2050s')
     years_2080 = pd.read_excel(edit_typ_path, sheet_name='2080s')
@@ -43,6 +44,7 @@ def edit_typology(config):
     pathway_code = config.general.parent
     pathway_items = pathway_code.split('_')
     scenario_year = int(pathway_items[1])
+    config.emissions.year_to_calculate = scenario_year
 
     if scenario_year == 2050:
         new_df = typ.merge(years_2050, on='Name')
@@ -55,7 +57,7 @@ def edit_typology(config):
     else:
         new_df = pd.DataFrame()
         print('Year designation is incorrect')
-
+    print(typ_path)
     cea.utilities.dbf.dataframe_to_dbf(new_df, typ_path)
     return print(' - Typology file fixed')
 
@@ -70,21 +72,27 @@ def run_changes(proj, config):
 
         edit_typology(config)
 
+        print(config.scenario)
         print(' - - Running system-costs and lca emissions for project-{}.'.format(name))
         # running the emissions and costing calculations
+        cea.datamanagement.data_initializer.main(config)
         cea.analysis.costs.system_costs.main(config)
         cea.analysis.lca.main.main(config)
-        print(' - Switch to next project.')
+        print(' - Switch to next experiment.')
 
 
 def main(config):
-    project_list = ['wesbrook_2050_ssp126']  # , 'wesbrook_2050_ssp585', 'wesbrook_2080_ssp126', 'wesbrook_2080_ssp585']
+    project_list = ['wesbrook_2050_ssp126', 'wesbrook_2050_ssp585', 'wesbrook_2080_ssp126', 'wesbrook_2080_ssp585']
+    t0 = time.perf_counter()
     for proj in project_list:
         print(' - Beginning {}'.format(proj))
         config.general.parent = proj
         run_changes(proj, config)
         print(' - Finished with {}'.format(proj))
+    time_elapsed = time.perf_counter() - t0
+    print('Experiment Time: {}'.format(time_elapsed))
     return print(' - CHANGES COMPLETED')
+
 
 
 if __name__ == '__main__':

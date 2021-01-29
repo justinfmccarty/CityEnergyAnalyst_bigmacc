@@ -51,28 +51,22 @@ def necessary_cooling_supply(service_df, val1, val2, val3):
         return service_df['type_cs_x']
 
 def settemps_rule(df, config): # SETS FOR HEATING REDUCED 1C (20C TO 19C) AND SETS FOR COOLING RAISED 1C (24C TO 25C)
+
     print('---- CHECKING SETPOINT RULE ----')
     locator = cea.inputlocator.InputLocator(config.scenario)
     i = config.bigmacc.key
     keys = [int(x) for x in str(i)]
     if keys[0]==1:
-        from shutil import copyfile
-        # copyfile(locator.get_alt_use_type_properties(), locator.get_database_use_types_properties())
-        usetype_path = locator.get_database_use_types_properties()
-        usetype_IC = pd.read_excel(usetype_path, sheet_name='INDOOR_COMFORT')
-        usetype_IL = pd.read_excel(usetype_path, sheet_name='INTERNAL_LOADS')
-        usetype_IC['Tcs_set_C'] = usetype_IC['Tcs_set_C'] + df['SP_cool'].values.tolist()[0]
-        usetype_IC['Ths_set_C'] = usetype_IC['Ths_set_C'] + df['SP_heat'].values.tolist()[0]
-        usetype_IC['Tcs_setb_C'] = usetype_IC['Tcs_setb_C'] + df['SP_cool'].values.tolist()[0]
-        usetype_IC['Ths_setb_C'] = usetype_IC['Ths_setb_C'] + df['SP_heat'].values.tolist()[0]
+        comfort_path = locator.get_building_comfort()
 
-        # Create a Pandas Excel writer using XlsxWriter as the engine.
-        writer = pd.ExcelWriter(locator.get_database_use_types_properties(), engine='xlsxwriter')
+        comfort = cea.utilities.dbf.dbf_to_dataframe(comfort_path)
 
-        # Write each dataframe to a different worksheet.
-        usetype_IC.to_excel(writer, sheet_name='INDOOR_COMFORT')
-        usetype_IL.to_excel(writer, sheet_name='INTERNAL_LOADS')
-        writer.save()
+        comfort['Tcs_set_C'] = comfort['Tcs_set_C'] + df['SP_cool'].values.tolist()[0]
+        comfort['Ths_set_C'] = comfort['Ths_set_C'] + df['SP_heat'].values.tolist()[0]
+        comfort['Tcs_setb_C'] = comfort['Tcs_setb_C'] + df['SP_cool'].values.tolist()[0]
+        comfort['Ths_setb_C'] = comfort['Ths_setb_C'] + df['SP_heat'].values.tolist()[0]
+        cea.utilities.dbf.dataframe_to_dbf(comfort, comfort_path)
+
         print(' - Replacing set temperatures for experiment {}.'.format(i))
     else:
         print(' - Experiment {} does not use altered set temperatures.'.format(i))
@@ -118,7 +112,6 @@ def deepretrofit_rule(df, config): # EXISTING BUILDINGS HAVE DEEP WALL AND WINDO
         arch.loc[arch.Name.isin(existing_bldgs), 'wwr_south'] = float(df['DR_wwr'].values.tolist()[0])
         arch.loc[arch.Name.isin(existing_bldgs), 'wwr_west'] = float(df['DR_wwr'].values.tolist()[0])
 
-        arch.to_csv(r"C:\Users\justi\Desktop\test0.csv")
         cea.utilities.dbf.dataframe_to_dbf(arch, arch_path)
         print(' - Replacing type_win, type_leak, type_wall with high performance retrofits and reducing WWR to 20% for experiment {}.'.format(i))
 

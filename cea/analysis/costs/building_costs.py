@@ -11,6 +11,7 @@ import cea.inputlocator
 
 from cea.analysis.lca.embodied import calc_if_existing
 import numpy as np
+
 from geopandas import GeoDataFrame as Gdf
 import pandas as pd
 from cea.analysis.costs.equations import calc_capex_annualized, calc_opex_annualized
