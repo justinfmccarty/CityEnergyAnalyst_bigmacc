@@ -10,7 +10,6 @@ import pandas as pd
 import cea.datamanagement.data_initializer
 import cea.analysis.costs.system_costs
 import cea.analysis.lca.main
-import cea.bigmacc.copy_results
 import cea.bigmacc.create_rule_dataframe
 import cea.config
 import cea.datamanagement.archetypes_mapper

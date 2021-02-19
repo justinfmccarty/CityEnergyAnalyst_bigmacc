@@ -8,7 +8,6 @@ import cea.inputlocator
 import cea.utilities.dbf
 import pandas as pd
 import numpy as np
-import itertools
 import cea.bigmacc.bigmacc_util as util
 
 __author__ = "Justin McCarty"

@@ -9,6 +9,7 @@ import cea.resources.radiation_daysim.radiation_main
 import os
 import xlsxwriter
 import itertools
+import numpy as np
 import cea.analysis.costs.system_costs
 import cea.analysis.lca.main
 import time
@@ -20,7 +21,7 @@ import pandas as pd
 import cea.utilities
 import cea.demand.demand_main
 import cea.resources.radiation_daysim.radiation_main
-import cea.bigmacc.copy_results
+import cea.bigmacc.deprecated.copy_results
 import cea.datamanagement.archetypes_mapper
 import zipfile
 import cea.utilities.dbf
@@ -148,27 +149,30 @@ def testif(config):
         print('Writing File')
 
 
-def checkscen(config):
-    locator = cea.inputlocator.InputLocator(scenario=config.scenario)
+def write_pv_to_demand(config):
+    locator = cea.inputlocator.InputLocator(config.scenario)
 
-    air_con_path = locator.get_building_air_conditioning()
-    air_con = cea.utilities.dbf.dbf_to_dataframe(air_con_path)
+    pv_total = pd.read_csv(locator.PV_total_buildings(), index_col='Name')
+    demand_total = pd.read_csv(locator.get_total_demand(format='csv'), index_col='Name')
 
-    supply_path = locator.get_building_supply()
-    supply = cea.utilities.dbf.dbf_to_dataframe(supply_path)
+    for bldg in pv_total.index.to_list()[1:8]:
+        pv_bldg = pd.read_csv(locator.PV_results(bldg))
+        hourly_results = locator.get_demand_results_file(bldg, format='csv')
+        df_demand = pd.read_csv(hourly_results)
+        df_demand['PV_kWh'] = 0
+        df_demand['PV_kWh'] = pv_bldg['E_PV_gen_kWh'].astype(float)
+        df_demand['GRID_kWh'] = df_demand[['GRID_a_kWh', 'GRID_l_kWh', 'GRID_v_kWh', 'GRID_ve_kWh', 'GRID_data_kWh',
+                                           'GRID_pro_kWh', 'GRID_aux_kWh', 'GRID_ww_kWh', 'GRID_hs_kWh',
+                                           'GRID_cs_kWh', 'GRID_cdata_kWh', 'GRID_cre_kWh']].sum(axis=1)
+        df_demand['GRID_kWh'] = np.clip(df_demand['GRID_kWh'] - df_demand['PV_kWh'], 0, None)
+        demand_total.loc[bldg]['PV_MWhyr'] = df_demand['PV_kWh'].sum() / 1000
+        demand_total.loc[bldg]['GRID_MWhyr'] = df_demand['GRID_kWh'].sum() / 1000
+        df_demand.to_csv(hourly_results)
+        # write bldg to file
+    # write total to file
+    demand_total.to_csv(locator.get_total_demand(format='csv'))
 
-    df = supply.merge(air_con, on='Name')
-
-    supply = df[['Name', 'type_cs_x', 'type_hs_x', 'type_dhw_x', 'type_el']]
-    supply = supply.rename(columns={'type_cs_x': 'type_cs', 'type_hs_x': 'type_hs', 'type_dhw_x': 'type_dhw'})
-
-    air_con = df[['Name', 'type_cs_y', 'type_hs_y', 'type_dhw_y', 'type_ctrl', 'type_vent', 'heat_starts', 'heat_ends',
-                  'cool_starts', 'cool_ends']]
-    air_con = air_con.rename(columns={'type_cs_y': 'type_cs', 'type_hs_y': 'type_hs', 'type_dhw_y': 'type_dhw'})
-    # df.to_csv(r"C:\Users\justi\Desktop\test1.csv")
-    cea.utilities.dbf.dataframe_to_dbf(air_con, r"C:\Users\justi\Desktop\air_con.dbf")
-    cea.utilities.dbf.dataframe_to_dbf(supply, r"C:\Users\justi\Desktop\supply.dbf")
-
+    return print('Took PV results and added them to the demand file.')
 
 if __name__ == '__main__':
-    main(cea.config.Configuration())
+    write_pv_to_demand(cea.config.Configuration())

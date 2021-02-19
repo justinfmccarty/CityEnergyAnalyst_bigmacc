@@ -469,10 +469,10 @@ Development:
 
 BIGMACC:
   - name: bigmacc
-    label: first script
-    description: learning the config
+    label: bigmacc main
+    description: The bigmacc loop script
     interfaces: [ cli, dashboard ]
-    module: cea.bigmacc.bigmacc_backup
+    module: cea.bigmacc.bigmacc
     parameters: [ general,
                   costs,
                   water-body,
@@ -486,6 +486,19 @@ BIGMACC:
     input-files:
       - [ get_zone_geometry ]
       - [ get_building_typology ]
+
+  - name: wesbrook_DH
+      label: recalc_wesbrook
+      description: recalculate the DH at Wesbrook
+      interfaces: [ cli, dashboard ]
+      module: cea.bigmacc.wesbrook_DH
+      parameters: [ general,
+                    emissions,
+                    archetypes-mapper,
+                    data-initializer ]
+      input-files:
+        - [ get_zone_geometry ]
+        - [ get_building_typology ]
 
   - name: looptest
     label: for looping through experiments
