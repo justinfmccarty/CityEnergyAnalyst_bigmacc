@@ -6,6 +6,7 @@ import os
 import pandas as pd
 import time
 import logging
+
 logging.getLogger('numba').setLevel(logging.WARNING)
 import shutil
 import cea.config
@@ -123,14 +124,47 @@ def run(config):
             print(' - Schedule maker running for experiment {}.'.format(i))
             schedule_maker.main(config)
 
-        print(' - Running demand simulation for experiment {}.'.format(i))
-        cea.demand.demand_main.main(config)
+        # check to see if we need to rerun demand or if we can copy
+        if config.bigmacc.rerun != True:
+            print(' - Running demand simulation for experiment {}.'.format(i))
+            cea.demand.demand_main.main(config)
+        else:
+            if keys[0]==1:
+                print(' - Running demand simulation for experiment {}.'.format(i))
+                cea.demand.demand_main.main(config)
+            elif keys[6]==1:
+                print(' - Running demand simulation for experiment {}.'.format(i))
+                cea.demand.demand_main.main(config)
+            else:
+                print(' - Looking for demand results data from previous run for experiment {}.'.format(i))
+                old_demand_files = os.path.join(config.bigmacc.data, config.general.parent, i,
+                                            config.general.scenario_name, 'outputs', 'data', 'demand')
+                if os.path.exists(old_demand_files):
+                    print(' - Copy demand results files from previous run of experiment {}.'.format(i))
+                    distutils.dir_util.copy_tree(old_demand_files, locator.get_demand_results_folder())
+                else:
+                    print(' - No results found.')
+                    print(' - Running demand simulation for experiment {}.'.format(i))
+                    cea.demand.demand_main.main(config)
 
-        print(' - Run PV is {}.'.format(config.bigmacc.pv))
-        # if PV simulation is needed, run it.
-        if config.bigmacc.pv == True:
-            print(' - Running PV simulation for experiment {}.'.format(i))
-            photovoltaic.main(config)
+        if config.bigmacc.rerun != True:
+            print(' - Checking if run PV simulation is true for experiment {}.'.format(i))
+            print(' - Run PV is {}.'.format(config.bigmacc.pv))
+            # if PV simulation is needed, run it.
+            if config.bigmacc.pv == True:
+                print(' - Running PV simulation for experiment {}.'.format(i))
+                photovoltaic.main(config)
+        else:
+            print(' - Looking for radiation simulation data from previous run for experiment {}.'.format(i))
+            old_pv_files = os.path.join(config.bigmacc.data, config.general.parent, i,
+                                        config.general.scenario_name, 'outputs', 'data', 'potentials', 'solar')
+            if os.path.exists(old_pv_files):
+                print(' - Copying PV files from previous run of experiment {}.'.format(i))
+                distutils.dir_util.copy_tree(old_pv_files, locator.solar_potential_folder())
+            else:
+                print(' - PV files do not exist for previous run of experiment {} at {}.'.format(i, old_pv_files))
+                print(' - Running PV simulation for experiment {}.'.format(i))
+                photovoltaic.main(config)
 
         print('Run water-body exchange is {}.'.format(config.bigmacc.water))
         # if water-body simulation is needed, run it.
@@ -139,7 +173,7 @@ def run(config):
             water.main(config)
 
         # recalculating the supply split between grid and ng in the websrook DH
-        if (keys[2] == 1 and keys[4] == 1):
+        if keys[4] == 1:
             print(' - Do not run district heat recalculation.')
         else:
             print(' - Run district heat recalculation.')
@@ -177,7 +211,7 @@ def run(config):
                                              'Experiment Time': '%d.2 seconds' % time_elapsed,
                                              'Unique Radiation': config.bigmacc.runrad}, index=[0]), ignore_index=True)
         log_df.to_csv(os.path.join(bigmacc_outputs_path, 'logger.csv'))
-        log_df.to_csv(r"C:\Users\justi\Desktop\126logger_backup.csv",)
+        log_df.to_csv(r"C:\Users\justi\Desktop\126logger_backup.csv", )
 
         # write netcdf of hourly_results
         netcdf_writer.main(config, time='hourly')
@@ -198,12 +232,11 @@ def run(config):
 
 
 def main(config):
-
     print('STARTING UP THE BIGMACC SCRIPT')
     cea.datamanagement.data_initializer.main(config)
     key_list = util.generate_key_list(config)
 
-    bigmacc_outputs_path = os.path.join(config.bigmacc.data,config.general.parent,'bigmacc_out',config.bigmacc.round)
+    bigmacc_outputs_path = os.path.join(config.bigmacc.data, config.general.parent, 'bigmacc_out', config.bigmacc.round)
     if os.path.exists(bigmacc_outputs_path):
         pass
     else:

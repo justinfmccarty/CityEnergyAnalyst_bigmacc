@@ -120,8 +120,13 @@ def calc_district_demand(df):
 
 
 def recalc_DH(config):
+    # TODO rewrite so the district heat and district hot water can run independentely
     locator = cea.inputlocator.InputLocator(config.scenario)
     on_DH_hs, on_DH_dhw = district_buildings(locator)
+
+    while (len(on_DH_hs) == 0 or len(on_DH_dhw) == 0):
+        print('wrong')
+        break
 
     heat_df = pd.DataFrame()
     print(' - - - Gathering space heating...')
@@ -147,6 +152,7 @@ def recalc_DH(config):
 
     def calc_share(demand, total):
         return demand / total
+    print(' - - - Calculating share of district heat load...')
 
     heat_df_share = heat_df.apply(lambda x: calc_share(x, heat_df.loc['total']), axis=1)
     dhw_df_share = dhw_df.apply(lambda x: calc_share(x, dhw_df.loc['total']), axis=1)
@@ -165,7 +171,7 @@ def recalc_DH(config):
 
     all_bldgs = on_DH_hs + list(set(on_DH_dhw) - set(on_DH_hs))
     if on_DH_hs == on_DH_dhw:
-
+        print(' - - - Changing results for all bldgs...')
         for bldg in all_bldgs:
             # open bldg demand file and replace _ww_kWh with following
             hourly_results = locator.get_demand_results_file(bldg, 'csv')
@@ -192,6 +198,7 @@ def recalc_DH(config):
     else:
         for bldg in on_DH_hs:
             # open bldg demand file and replace _ww_kWh with following
+            print(' - - - Resetting results for all district heat buildings...')
             hourly_results = locator.get_demand_results_file(bldg, 'csv')
             df_demand = pd.read_csv(hourly_results)
             df_demand['GRID_hs_kWh'] = hp_heat.loc[bldg]
@@ -203,6 +210,7 @@ def recalc_DH(config):
 
         for bldg in on_DH_dhw:
             # open bldg demand file and replace _ww_kWh with following
+            print(' - - - Resetting results for district hot water bldgs...')
             hourly_results = locator.get_demand_results_file(bldg, 'csv')
             df_demand = pd.read_csv(hourly_results)
             df_demand['GRID_ww_kWh'] = hp_dhw.loc[bldg]

@@ -311,7 +311,7 @@ def netcdf_hourly(config):
                                f"hourly_{config.general.parent}_{config.bigmacc.key}")
     # hourly.to_netcdf(hourly_path)
     hourly.to_zarr(zarr_path)
-    print(f' - Saved hourly dataset netcdf to {hourly_path}')
+    print(f' - Saved hourly dataset netcdf to {zarr_path}')
 
 
 
