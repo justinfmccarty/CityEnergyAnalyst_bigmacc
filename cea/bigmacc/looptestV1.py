@@ -86,17 +86,12 @@ def log(config):
                                              'Unique Radiation': config.bigmacc.runrad}, index=[0]), ignore_index=True)
     log_df.to_csv(os.path.join(config.bigmacc.keys, 'logger.csv'))
 
+def change():
+    os.chdir('F:\BIGMACC_WESBROOK\Projects')
 
-def check(config):
-    locator = cea.inputlocator.InputLocator(scenario=config.scenario)
-    for i in list(range(1, 10)):
-        print('{} one'.format(i))
-        if os.path.exists(locator.get_schedule_model_folder()):
-            print('{} two'.format(i))
-            break
-        else:
-            print(i)
-    print('All')
+def check():
+    print(os.getcwd())
+
 
 
 def writingexcel(config):
@@ -175,4 +170,4 @@ def write_pv_to_demand(config):
     return print('Took PV results and added them to the demand file.')
 
 if __name__ == '__main__':
-    write_pv_to_demand(cea.config.Configuration())
+    print(cea.config.Configuration().general.parent)

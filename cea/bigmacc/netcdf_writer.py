@@ -4,8 +4,10 @@ The BIGMACC script.
 
 import os
 import pandas as pd
+import numpy as np
 import logging
 import xarray as xr
+import zarr
 logging.getLogger('numba').setLevel(logging.WARNING)
 import cea.config
 import cea.utilities
@@ -31,16 +33,24 @@ __email__ = ""
 __status__ = ""
 
 
-def hourly_xr_get_hourly_results(scenario, strategy, bldg):
-    bldg_path = os.path.join(os.getcwd(), scenario, strategy, 'initial', 'outputs', 'data', 'demand',
+def generate_building_list(config, scenario):
+    file_path = os.path.join(config.bigmacc.data, scenario, '00000000', 'initial', 'outputs', 'data', 'demand',
+                             'Total_demand.csv')
+    data = pd.read_csv(file_path)
+    return np.array(data['Name'])
+
+
+def hourly_xr_get_hourly_results(config, scenario, strategy, bldg):
+    bldg_path = os.path.join(config.bigmacc.data, scenario, strategy, 'initial', 'outputs', 'data', 'demand',
                              '{}.csv'.format(bldg))
     data = pd.read_csv(bldg_path)
     return data
 
 
-def hourly_xr_create_hourly_results_df(config,strategy):
-    buildings = util.generate_key_list(config)
+def hourly_xr_create_hourly_results_df(config):
     scenario = config.general.parent
+    buildings = generate_building_list(config, scenario)
+    strategy = config.bigmacc.key
 
     interior_temp_dict = dict()
     pv_gen_dict = dict()
@@ -71,8 +81,9 @@ def hourly_xr_create_hourly_results_df(config,strategy):
     cool_enduse_sys_dict = dict()
     cool_enduse_dict = dict()
 
-    for bldg in buildings:
-        data = hourly_xr_get_hourly_results(scenario, strategy, bldg)
+    for bldg in buildings.tolist():
+        print(f' - Adding {bldg} to the dataarray.')
+        data = hourly_xr_get_hourly_results(config, scenario, strategy, bldg)
         interior_temp_dict[bldg] = data['T_int_C']  # 0
         pv_gen_dict[bldg] = data['PV_kWh']  # 1
         operative_temp_dict[bldg] = data['theta_o_C']  # 2
@@ -111,14 +122,12 @@ def hourly_xr_create_hourly_results_df(config,strategy):
             cool_enduse_sys_dict, cool_enduse_dict]
 
 
-def hourly_xr_get_annual_results(scen, sset):
-    embodied_carbon_path = os.path.join(os.getcwd(), scen, sset, 'initial', 'outputs', 'data', 'emissions',
-                                        'Total_LCA_embodied.csv')
-    operational_carbon_path = os.path.join(os.getcwd(), scen, sset, 'initial', 'outputs', 'data', 'emissions',
-                                           'Total_LCA_operation.csv')
-    building_tac_path = os.path.join(os.getcwd(), scen, sset, 'initial', 'outputs', 'data', 'costs', 'building_tac.csv')
-    supply_syst_path = os.path.join(os.getcwd(), scen, sset, 'initial', 'outputs', 'data', 'costs',
-                                    'supply_system_costs_today.csv')
+def hourly_xr_get_annual_results(config):
+    locator = cea.inputlocator.InputLocator(config.scenario)
+    embodied_carbon_path = locator.get_lca_embodied()
+    operational_carbon_path = locator.get_lca_operation()
+    building_tac_path = locator.get_building_tac_file()
+    supply_syst_path = locator.get_costs_operation_file()
 
     emb_carbon = pd.read_csv(embodied_carbon_path)['GHG_sys_embodied_tonCO2'].sum()
     op_carbon_district = pd.read_csv(operational_carbon_path)['GHG_sys_district_scale_tonCO2'].sum()
@@ -132,11 +141,12 @@ def hourly_xr_get_annual_results(scen, sset):
             supply_costs_capex]
 
 
-def hourly_xr_create_hourly_dataset(config, sset):
-    scen = config.general.parent
-    time_arr = pd.date_range("{}-01-01".format(scen.split('_')[1]), periods=8760, freq="h")
-    data = hourly_xr_create_hourly_results_df(scen, sset)
-    annual_results = hourly_xr_get_annual_results(scen, sset)
+def hourly_xr_create_hourly_dataset(config):
+    scenario = config.general.parent
+    strategy = config.bigmacc.key
+    time_arr = pd.date_range("{}-01-01".format(scenario.split('_')[1]), periods=8760, freq="h")
+    data = hourly_xr_create_hourly_results_df(config)
+    annual_results = hourly_xr_get_annual_results(config)
     d = xr.Dataset(
         data_vars=dict(
             interior_temp_C=(["buildings", "times"], pd.DataFrame.from_dict(data[0]).to_numpy()),
@@ -169,11 +179,11 @@ def hourly_xr_create_hourly_dataset(config, sset):
             enduse_cool_kwh=(["buildings", "times"], pd.DataFrame.from_dict(data[26]).to_numpy()),
         ),
         coords=dict(
-            bldgs=("building", util.generate_key_list(config)),
+            bldgs=("building", generate_building_list(config,scenario)),
             time=time_arr,
         ),
-        attrs=dict(scenario=scen,
-                   strategy_set=sset,
+        attrs=dict(scenario=scenario,
+                   strategy_set=strategy,
                    embodied_tonCO2=annual_results[0],
                    operating_district_tonCO2=annual_results[1],
                    operating_building_tonCO2=annual_results[2],
@@ -184,35 +194,45 @@ def hourly_xr_create_hourly_dataset(config, sset):
     return d
 
 
-def whole_xr_get_annual_results_bldg(config, sset):
-    scen = config.general.parent
-
-    embodied_carbon_path = os.path.join(os.getcwd(), scen, sset, 'initial', 'outputs', 'data', 'emissions',
+def whole_xr_get_annual_results_bldg(config, strategy):
+    scenario = config.general.parent
+    root_path = config.bigmacc.data
+    embodied_carbon_path = os.path.join(root_path, scenario, strategy, 'initial', 'outputs', 'data', 'emissions',
                                         'Total_LCA_embodied.csv')
-    operational_carbon_path = os.path.join(os.getcwd(), scen, sset, 'initial', 'outputs', 'data', 'emissions',
+    operational_carbon_path = os.path.join(root_path, scenario, strategy, 'initial', 'outputs', 'data', 'emissions',
                                            'Total_LCA_operation.csv')
-    building_tac_path = os.path.join(os.getcwd(), scen, sset, 'initial', 'outputs', 'data', 'costs', 'building_tac.csv')
-    supply_syst_path = os.path.join(os.getcwd(), scen, sset, 'initial', 'outputs', 'data', 'costs',
+    building_tac_path = os.path.join(root_path, scenario, strategy, 'initial', 'outputs', 'data', 'costs',
+                                     'building_tac.csv')
+    supply_syst_path = os.path.join(root_path, scenario, strategy, 'initial', 'outputs', 'data', 'costs',
                                     'supply_system_costs_today.csv')
-    building_demand_path = os.path.join(os.getcwd(), scen, sset, 'initial', 'outputs', 'data', 'demand',
+    building_demand_path = os.path.join(root_path, scenario, strategy, 'initial', 'outputs', 'data', 'demand',
                                         'Total_demand.csv')
-    building_comfort_path = os.path.join(os.getcwd(), scen, sset, 'initial', 'inputs', 'building-properties',
+    building_comfort_path = os.path.join(root_path, scenario, strategy, 'initial', 'inputs', 'building-properties',
                                          'indoor_comfort.dbf')
 
-    gross_area_sqm = pd.read_csv(building_tac_path, index_col='Name')['GFA_m2']
-    floor_area_sqm = pd.read_csv(building_tac_path, index_col='Name')['footprint']
-    height_above_ground_m = pd.read_csv(building_tac_path, index_col='Name')['height_ag']
-    height_below_ground_m = pd.read_csv(building_tac_path, index_col='Name')['height_bg']
-    primary_use = pd.read_csv(building_tac_path, index_col='Name')['1ST_USE']
-    year = pd.read_csv(building_tac_path, index_col='Name')['YEAR']
-    base_type = pd.read_csv(building_tac_path, index_col='Name')['STANDARD']
-    emb_carbon = pd.read_csv(embodied_carbon_path, index_col='Name')['GHG_sys_embodied_tonCO2']
-    op_carbon_district = pd.read_csv(operational_carbon_path, index_col='Name')['GHG_sys_district_scale_tonCO2']
-    op_carbon_building = pd.read_csv(operational_carbon_path, index_col='Name')['GHG_sys_building_scale_tonCO2']
-    build_costs_opex = pd.read_csv(building_tac_path, index_col='Name')['opex_building_systems']
-    build_costs_capex = pd.read_csv(building_tac_path, index_col='Name')['capex_building_systems']
-    supply_costs_opex = pd.read_csv(supply_syst_path, index_col='Name')['Opex_sys_USD']
-    supply_costs_capex = pd.read_csv(supply_syst_path, index_col='Name')['Capex_total_sys_USD']
+    building_tac_df = pd.read_csv(building_tac_path, index_col='Name')
+    embodied_carbon_df = pd.read_csv(embodied_carbon_path, index_col='Name')
+    operational_carbon_df = pd.read_csv(operational_carbon_path, index_col='Name')
+    supply_syst_df = pd.read_csv(supply_syst_path, index_col='Name')
+
+    gross_area_sqm = building_tac_df['GFA_m2']
+    floor_area_sqm = building_tac_df['footprint']
+    height_above_ground_m = building_tac_df['height_ag']
+    height_below_ground_m = building_tac_df['height_bg']
+    primary_use = building_tac_df['1ST_USE']
+    year = building_tac_df['YEAR']
+    base_type = building_tac_df['STANDARD']
+    emb_carbon = embodied_carbon_df['GHG_sys_embodied_tonCO2']
+    op_carbon_district = operational_carbon_df['GHG_sys_district_scale_tonCO2']
+    op_carbon_building = operational_carbon_df['GHG_sys_building_scale_tonCO2']
+    build_costs_opex = building_tac_df['opex_building_systems']
+    build_costs_capex = building_tac_df['capex_building_systems']
+    supply_costs_opex = supply_syst_df['Opex_sys_USD']
+    supply_costs_capex = supply_syst_df['Capex_total_sys_USD']
+    wwr_north = building_tac_df['wwr_north']
+    wwr_west = building_tac_df['wwr_west']
+    wwr_east = building_tac_df['wwr_east']
+    wwr_south = building_tac_df['wwr_south']
 
     total_demand = pd.read_csv(building_demand_path, index_col='Name')
 
@@ -230,9 +250,9 @@ def whole_xr_get_annual_results_bldg(config, sset):
     teui = total_demand['teui']
     pv = total_demand['PV_MWhyr']
 
-    indoor_comfort_df = cea.utilities.dbf.dbf_to_dataframe(building_comfort_path)
+    indoor_comfort_df = cea.utilities.dbf.dbf_to_dataframe(building_comfort_path, index='Name')
 
-    buildings = util.generate_key_list(config)
+    buildings = generate_building_list(config, scenario)
     hours_above_cool_sb_dict = dict()
     hours_below_heat_sb_dict = dict()
     hours_above_cool_sp_dict = dict()
@@ -240,8 +260,9 @@ def whole_xr_get_annual_results_bldg(config, sset):
     hours_above_30C_dict = dict()
     hours_below_15C_dict = dict()
 
-    for bldg in buildings:
-        data = hourly_xr_get_hourly_results(scen, sset, bldg)
+    for bldg in buildings.tolist():
+        print(f' - Adding {bldg} to the dataarray.')
+        data = hourly_xr_get_hourly_results(config, scenario, strategy, bldg)
         hours_above_cool_sb_dict[bldg] = (data['T_int_C'].values > indoor_comfort_df.loc[bldg]['Tcs_setb_C']).sum()
         hours_below_heat_sb_dict[bldg] = (data['T_int_C'].values < indoor_comfort_df.loc[bldg]['Ths_setb_C']).sum()
         hours_above_cool_sp_dict[bldg] = (data['T_int_C'].values > indoor_comfort_df.loc[bldg]['Tcs_set_C']).sum()
@@ -261,32 +282,61 @@ def whole_xr_get_annual_results_bldg(config, sset):
     ann_res = [gross_area_sqm, floor_area_sqm, height_above_ground_m, height_below_ground_m, primary_use, year,
                base_type,
                emb_carbon, op_carbon_district, op_carbon_building, build_costs_opex, build_costs_capex,
-               supply_costs_opex, supply_costs_capex,
+               supply_costs_opex, supply_costs_capex,wwr_north,wwr_west,wwr_east,wwr_south,
                teui, pv, above_sb, below_sb, above_sp, below_sp, above_30C, below_15C]
 
     return pd.concat(ann_res, axis=1)
 
 
 def whole_xr_create_annual_dataset(config):
-    sset_list =util.generate_key_list(config)
-    scen = config.general.parent
+    strategy_list = util.generate_key_list(config)
     datasets = []
-    for i in sset_list[0:2]:
-        ann_res = whole_xr_get_annual_results_bldg(scen, i)
+    for strategy in strategy_list:
+        print(f' - Adding {strategy} to the dataset.')
+        ann_res = whole_xr_get_annual_results_bldg(config, strategy)
         ann_res = ann_res.rename_axis(None, axis=1).rename_axis('Name', axis=0)
         ann_res_ds = xr.Dataset.from_dataframe(ann_res, sparse=False)
-        ann_res_ds = ann_res_ds.assign_coords(strategy_set=i)
+        ann_res_ds = ann_res_ds.assign_coords(strategy_set=strategy)
         datasets.append(ann_res_ds)
     return xr.concat(datasets, dim='strategy_set')
 
 
-def netcdf_main(config):
-    for sset in util.generate_key_list(config)[0:2]:
-        hourly = hourly_xr_create_hourly_dataset(config, sset)
-        # hourly.to_netcdf(f"/hourly_{scen}_{sset}.nc")
+def netcdf_hourly(config):
+    hourly = hourly_xr_create_hourly_dataset(config)
+    hourly_path = os.path.join(config.bigmacc.data, config.general.parent,
+                               'bigmacc_out', config.bigmacc.round,
+                               f"hourly_{config.general.parent}_{config.bigmacc.key}.nc")
+    zarr_path = os.path.join(config.bigmacc.data, config.general.parent,
+                               'bigmacc_out', config.bigmacc.round,
+                               f"hourly_{config.general.parent}_{config.bigmacc.key}")
+    # hourly.to_netcdf(hourly_path)
+    hourly.to_zarr(zarr_path)
+    print(f' - Saved hourly dataset netcdf to {hourly_path}')
 
+
+
+def netcdf_whole(config):
     whole = whole_xr_create_annual_dataset(config)
-    # whole.to_netcdf(f"/whole_{scen}.nc")
+    whole_path = os.path.join(config.bigmacc.data, config.general.parent,
+                              'bigmacc_out', config.bigmacc.round,
+                              f"whole_{config.general.parent}")
+    whole.to_zarr(whole_path)
+    print(f' - Saved whole dataset netcdf to {whole_path}')
 
 
-# netcdf_main(scen, 8)
+def main(config, time='none'):
+    if time == 'hourly':
+        print(f' - Creating hourly dataset for {config.bigmacc.key}.')
+        netcdf_hourly(config)
+        print(f' - Hourly dataset for {config.bigmacc.key} saved to netcdf.')
+    elif time == 'whole':
+        print(f' - Creating whole dataset for {config.general.parent}.')
+        netcdf_whole(config)
+        print(f' - Whole dataset for {config.general.parent} saved to netcdf.')
+    else:
+        print(' - No netcdf files saved')
+    return print(' ')
+
+
+if __name__ == '__main__':
+    main(cea.config.Configuration(), time='whole')

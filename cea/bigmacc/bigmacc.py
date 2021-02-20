@@ -24,6 +24,7 @@ import cea.bigmacc.bigmacc_util as util
 import distutils
 import cea.technologies.solar.photovoltaic as photovoltaic
 import cea.resources.water_body_potential as water
+import cea.bigmacc.netcdf_writer as netcdf_writer
 from distutils import dir_util
 
 __author__ = "Justin McCarty"
@@ -40,9 +41,9 @@ def run(config):
     print('Key in run')
     print(config.bigmacc.key)
     """
-    This is the main entry point to your script. Any parameters used by your script must be present in the ``config``
-    parameter. The CLI will call this ``main`` function passing in a ``config`` object after adjusting the configuration
-    to reflect parameters passed on the command line / user interface
+    This is the main script for the bigmacc process. It iteartes through various CEA and bigmacc operations for each
+    key (i.e. 01011101). It ends by saving a sample of the hourly results across the key for each building in a netcdf 
+    and then wiping the project files to reset them for the next iteration. 
 
     :param config:
     :type config: cea.config.Configuration
@@ -54,28 +55,30 @@ def run(config):
     print(i)
     # SCENARIO SETUP ---
 
+    # use the scenario code to set the year for the lca and other operations that need the current year
     pathway_code = config.general.parent
     pathway_items = pathway_code.split('_')
     scenario_year = int(pathway_items[1])
     config.emissions.year_to_calculate = scenario_year
 
-    scen_check = pd.read_csv(os.path.join(config.bigmacc.keys, 'logger.csv'), index_col='Unnamed: 0')
+    bigmacc_outputs_path = os.path.join(config.bigmacc.data, config.general.parent, 'bigmacc_out', config.bigmacc.round)
+
+    scen_check = pd.read_csv(os.path.join(bigmacc_outputs_path, 'logger.csv'), index_col='Unnamed: 0')
     experiment_key = 'exp_{}'.format(i)
     print(experiment_key)
     keys = [int(x) for x in str(i)]
     if experiment_key in scen_check['Experiments'].values.tolist():
         print('Experiment was finished previously, moving to next.')
         pass
-
     else:
         print('START: experiment {}.'.format(i))
 
         # INITIALIZE TIMER ---
         t0 = time.perf_counter()
-        if os.path.exists(os.path.join(config.bigmacc.keys, i)):
+        if os.path.exists(os.path.join(config.bigmacc.data, config.general.parent, i)):
             print(' - Folder exists for experiment {}.'.format(i))
         else:
-            os.mkdir(os.path.join(config.bigmacc.keys, i))
+            os.mkdir(os.path.join(config.bigmacc.data, config.general.parent, i))
             print(' - Folder does not exist for experiment {}, creating now.'.format(i))
 
         # run the archetype mapper to leverage the newly loaded typology file and set parameters
@@ -93,16 +96,18 @@ def run(config):
         # checking on need for radiation simulation
 
         if config.bigmacc.runrad == True:
+            # this nested statement is for when we rerun the simulations and no longer need to run the unique radiation
             if config.bigmacc.rerun != True:
                 print(' - Running radiation simulation for experiment {}.'.format(i))
                 if os.path.exists(locator.get_radiation_building('B000')):
-                    print(' - Radiation folder exists for experiment {}, using that.'.format(i))
+                    print(' - Radiation folder exists for experiment {}, copying.'.format(i))
                 else:
                     print(' - Radiation running for experiment {}.'.format(i))
                     cea.resources.radiation_daysim.radiation_main.main(config)
             else:
                 print(' - Copying radiation simulation data from previous run for experiment {}.'.format(i))
-                old_rad_files = os.path.join(config.bigmacc.keys, i, config.general.scenario_name, 'outputs', 'data', 'solar_radiation')
+                old_rad_files = os.path.join(config.bigmacc.data, config.general.parent, i,
+                                             config.general.scenario_name, 'outputs', 'data', 'solar-radiation')
                 distutils.dir_util.copy_tree(old_rad_files, locator.get_solar_radiation_folder())
         else:
             radfiles = config.bigmacc.copyrad
@@ -133,9 +138,6 @@ def run(config):
             print(' - Running water body simulation for experiment {}.'.format(i))
             water.main(config)
 
-
-        # insert new scripts here!
-
         # recalculating the supply split between grid and ng in the websrook DH
         if (keys[2] == 1 and keys[4] == 1):
             print(' - Do not run district heat recalculation.')
@@ -150,32 +152,35 @@ def run(config):
             print(' - No PV use detected.')
 
         # running the emissions and costing calculations
+        print(' - Run cost and emissions scripts.')
         cea.analysis.costs.system_costs.main(config)
         cea.analysis.lca.main.main(config)
 
         # clone out the simulation inputs and outputs directory
         print(' - Transferring results directory for experiment {}.'.format(i))
 
-        inputs_path = os.path.join(config.bigmacc.keys, i, config.general.scenario_name, 'inputs')
-        outputs_path = os.path.join(config.bigmacc.keys, i, config.general.scenario_name, 'outputs', 'data')
-        # costs_path = os.path.join(config.bigmacc.keys, i, 'outputs', 'data', 'costs')
-        # demand_path = os.path.join(config.bigmacc.keys, i, 'outputs', 'data', 'demand')
-        # emissions_path = os.path.join(config.bigmacc.keys, i, 'outputs', 'data', 'emissions')
-        # rad_path = os.path.join(config.bigmacc.keys, i, 'outputs', 'data', 'solar-radiation')
+        new_inputs_path = os.path.join(config.bigmacc.data, config.general.parent, i,
+                                       config.general.scenario_name, 'inputs')
+        new_outputs_path = os.path.join(config.bigmacc.data, config.general.parent, i,
+                                        config.general.scenario_name, 'outputs', 'data')
 
-        distutils.dir_util.copy_tree(locator.get_data_results_folder(), outputs_path)
-        distutils.dir_util.copy_tree(locator.get_input_folder(), inputs_path)
+        distutils.dir_util.copy_tree(locator.get_data_results_folder(), new_outputs_path)
+        distutils.dir_util.copy_tree(locator.get_input_folder(), new_inputs_path)
 
         time_elapsed = time.perf_counter() - t0
 
-        log_df = pd.read_csv(os.path.join(config.bigmacc.keys, 'logger.csv'),
+        # save log information
+        log_df = pd.read_csv(os.path.join(bigmacc_outputs_path, 'logger.csv'),
                              index_col='Unnamed: 0')
         log_df = log_df.append(pd.DataFrame({'Experiments': 'exp_{}'.format(i),
                                              'Completed': 'True',
                                              'Experiment Time': '%d.2 seconds' % time_elapsed,
                                              'Unique Radiation': config.bigmacc.runrad}, index=[0]), ignore_index=True)
-        log_df.to_csv(os.path.join(config.bigmacc.keys, 'logger.csv'))
+        log_df.to_csv(os.path.join(bigmacc_outputs_path, 'logger.csv'))
         log_df.to_csv(r"C:\Users\justi\Desktop\126logger_backup.csv",)
+
+        # write netcdf of hourly_results
+        netcdf_writer.main(config, time='hourly')
 
         # delete results
         shutil.rmtree(locator.get_costs_folder())
@@ -184,6 +189,7 @@ def run(config):
         shutil.rmtree(locator.get_solar_radiation_folder())
         shutil.rmtree(locator.get_potentials_folder())
 
+        # when the setpoint is changed it is in a deeper database than the archetypes mapper can reach so reset it here
         if keys[0] == 1:
             cea.datamanagement.data_initializer.main(config)
         else:
@@ -197,17 +203,25 @@ def main(config):
     cea.datamanagement.data_initializer.main(config)
     key_list = util.generate_key_list(config)
 
-    if os.path.exists(os.path.join(config.bigmacc.keys, 'logger.csv')):
+    bigmacc_outputs_path = os.path.join(config.bigmacc.data,config.general.parent,'bigmacc_out',config.bigmacc.round)
+    if os.path.exists(bigmacc_outputs_path):
+        pass
+    else:
+        os.mkdir(bigmacc_outputs_path)
+
+    if os.path.exists(os.path.join(bigmacc_outputs_path, 'logger.csv')):
         pass
     else:
         initialdf = pd.DataFrame(columns=['Experiments', 'Completed', 'Experiment Time', 'Unique Radiation'])
-        initialdf.to_csv(os.path.join(config.bigmacc.keys, 'logger.csv'))
+        initialdf.to_csv(os.path.join(bigmacc_outputs_path, 'logger.csv'))
 
-    for i in key_list:
-        config.bigmacc.key = i
-        print('key in main')
+    for key in key_list:
+        config.bigmacc.key = key
         print(config.bigmacc.key)
         run(config)
+
+    print('Writing the whole scenario netcdf.')
+    netcdf_writer.main(config, time='whole')
 
     print('Simulations completed. Move to next scenario.')
 

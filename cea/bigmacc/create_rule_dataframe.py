@@ -34,13 +34,13 @@ def runrad_rule(key, run_list):  # SETS FOR HEATING REDUCED 1C (20C TO 19C) AND 
 def copy_key(key, run_list):
     config = cea.config.Configuration()
     if key in run_list:
-        return os.path.join(config.bigmacc.keys, key, config.general.scenario_name, 'outputs', 'data',
+        return os.path.join(config.bigmacc.data, config.general.parent, key, config.general.scenario_name, 'outputs', 'data',
                             'solar-radiation')
     elif util.change_key(key) in run_list:
-        return os.path.join(config.bigmacc.keys, util.change_key(key), config.general.scenario_name, 'outputs', 'data',
+        return os.path.join(config.bigmacc.data, config.general.parent, util.change_key(key), config.general.scenario_name, 'outputs', 'data',
                             'solar-radiation')
     else:
-        return os.path.join(config.bigmacc.keys, key, config.general.scenario_name, 'outputs', 'data',
+        return os.path.join(config.bigmacc.data, config.general.parent, key, config.general.scenario_name, 'outputs', 'data',
                             'solar-radiation')
 
 
