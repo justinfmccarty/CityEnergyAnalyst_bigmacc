@@ -147,22 +147,21 @@ def run(config):
                     print(' - Running demand simulation for experiment {}.'.format(i))
                     cea.demand.demand_main.main(config)
 
-        if config.bigmacc.rerun != True:
-            print(' - Checking if run PV simulation is true for experiment {}.'.format(i))
+        if config.bigmacc.pv == True:
             print(' - Run PV is {}.'.format(config.bigmacc.pv))
-            # if PV simulation is needed, run it.
-            if config.bigmacc.pv == True:
-                print(' - Running PV simulation for experiment {}.'.format(i))
-                photovoltaic.main(config)
-        else:
-            print(' - Looking for radiation simulation data from previous run for experiment {}.'.format(i))
-            old_pv_files = os.path.join(config.bigmacc.data, config.general.parent, i,
-                                        config.general.scenario_name, 'outputs', 'data', 'potentials', 'solar')
-            if os.path.exists(old_pv_files):
-                print(' - Copying PV files from previous run of experiment {}.'.format(i))
-                distutils.dir_util.copy_tree(old_pv_files, locator.solar_potential_folder())
+            if config.bigmacc.rerun == True:
+                print(' - Looking for radiation simulation data from previous run for experiment {}.'.format(i))
+                old_pv_files = os.path.join(config.bigmacc.data, config.general.parent, i,
+                                            config.general.scenario_name, 'outputs', 'data', 'potentials', 'solar')
+                if os.path.exists(old_pv_files):
+                    print(' - Copying PV files from previous run of experiment {}.'.format(i))
+                    distutils.dir_util.copy_tree(old_pv_files, locator.solar_potential_folder())
+                else:
+                    print(' - PV files do not exist for previous run of experiment {} at {}.'.format(i, old_pv_files))
+                    print(' - Running PV simulation for experiment {}.'.format(i))
+                    photovoltaic.main(config)
             else:
-                print(' - PV files do not exist for previous run of experiment {} at {}.'.format(i, old_pv_files))
+                # if PV simulation is needed, run it.
                 print(' - Running PV simulation for experiment {}.'.format(i))
                 photovoltaic.main(config)
 

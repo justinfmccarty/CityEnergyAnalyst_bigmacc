@@ -172,6 +172,7 @@ def recalc_DH(config):
     all_bldgs = on_DH_hs + list(set(on_DH_dhw) - set(on_DH_hs))
     if on_DH_hs == on_DH_dhw:
         print(' - - - Changing results for all bldgs...')
+
         for bldg in all_bldgs:
             # open bldg demand file and replace _ww_kWh with following
             hourly_results = locator.get_demand_results_file(bldg, 'csv')
@@ -240,6 +241,7 @@ def rewrite_to_csv(config):
     """
     locator = cea.inputlocator.InputLocator(config.scenario)
     df_ann = pd.read_csv(locator.get_total_demand('csv'), index_col='Name')
+    print(' - Rewriting annual results following recalculation.')
 
     for bldg in df_ann.index.to_list():
         hourly_results = locator.get_demand_results_file(bldg, 'csv')
