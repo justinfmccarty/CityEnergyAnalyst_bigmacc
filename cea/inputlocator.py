@@ -994,11 +994,11 @@ class InputLocator(object):
     # RETROFIT POTENTIAL
 
     def get_costs_operation_file(self):
-        """scenario/outputs/data/costs/{load}_cost_operation.pdf"""
+        """scenario/outputs/data/costs/{load}_cost_operation.csv"""
         return os.path.join(self.get_costs_folder(), 'supply_system_costs_today.csv' % locals())
 
     def get_building_tac_file(self):
-        """scenario/outputs/data/costs/building_tac.pdf"""
+        """scenario/outputs/data/costs/building_tac.csv"""
         return os.path.join(self.get_costs_folder(), 'building_tac.csv' % locals())
 
 

@@ -6,6 +6,9 @@ import os
 import zipfile
 import itertools
 import shutil
+import cea.inputlocator
+import pandas as pd
+import numpy as np
 
 __author__ = "Justin McCarty"
 __copyright__ = ""
@@ -39,6 +42,7 @@ def change_key(key):
     s[6] = '0'
     return "".join(s)
 
+
 def print_test(item):
     print(item)
     return item
@@ -59,7 +63,33 @@ def un_zip(zipped_loc):
     with zipfile.ZipFile(os.path.join(zipped_loc + ".zip"), "r") as zip_ref:
         zip_ref.extractall(os.path.join(zipped_loc))
 
+
 def get_key(df):
-  key = df['experiments']
-  integer = str(key.split("_")[1])
-  return integer
+    key = df['experiments']
+    integer = str(key.split("_")[1])
+    return integer
+
+
+def write_pv_to_demand(config):
+    locator = cea.inputlocator.InputLocator(config.scenario)
+
+    pv_total = pd.read_csv(locator.PV_total_buildings(), index_col='Name')
+    demand_total = pd.read_csv(locator.get_total_demand(format='csv'), index_col='Name')
+
+    for bldg in pv_total.index.to_list()[1:8]:
+        pv_bldg = pd.read_csv(locator.PV_results(bldg))
+        hourly_results = locator.get_demand_results_file(bldg, format='csv')
+        df_demand = pd.read_csv(hourly_results)
+        df_demand['PV_kWh'] = 0
+        df_demand['PV_kWh'] = pv_bldg['E_PV_gen_kWh'].astype(float)
+        df_demand['GRID_kWh'] = df_demand[['GRID_a_kWh', 'GRID_l_kWh', 'GRID_v_kWh', 'GRID_ve_kWh', 'GRID_data_kWh',
+                                           'GRID_pro_kWh', 'GRID_aux_kWh', 'GRID_ww_kWh', 'GRID_hs_kWh',
+                                           'GRID_cs_kWh', 'GRID_cdata_kWh', 'GRID_cre_kWh']].sum(axis=1)
+        df_demand['GRID_kWh'] = np.clip(df_demand['GRID_kWh'] - df_demand['PV_kWh'], 0, None)
+        demand_total.loc[bldg]['PV_MWhyr'] = df_demand['PV_kWh'].sum() / 1000
+        demand_total.loc[bldg]['GRID_MWhyr'] = df_demand['GRID_kWh'].sum() / 1000
+        df_demand.to_csv(hourly_results)
+        # write bldg to file
+    # write total to file
+    demand_total.to_csv(locator.get_total_demand(format='csv'))
+    return print(' - Took PV results and added them to the demand file.')

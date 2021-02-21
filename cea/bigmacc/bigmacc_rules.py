@@ -5,9 +5,7 @@ This is run in the main script (bigmacc.py) after the archetype-mapping and befo
 
 
 import os
-import pandas as pd
 import cea.config
-import numpy as np
 import cea.inputlocator
 import cea.utilities.dbf
 import cea.bigmacc.create_rule_dataframe
