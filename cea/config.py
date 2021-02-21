@@ -686,6 +686,14 @@ class SubfoldersParameter(ListParameter):
 class StringParameter(Parameter):
     typename = 'StringParameter'
 
+    def encode(self, value):
+        if value is None:
+            if self.nullable:
+                return ''
+            else:
+                raise ValueError("Can't encode None for non-nullable IntegerParameter.")
+        return str(value)
+
 
 class OptimizationIndividualListParameter(ListParameter):
     typename = 'OptimizationIndividualListParameter'
