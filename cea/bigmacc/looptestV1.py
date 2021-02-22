@@ -221,6 +221,31 @@ def check_rad_files_ready(config, key):
     else:
         return True
 
+def transfer(i,des,src):
+
+    if os.path.exists(des):
+        print(f'{i} --- Directory exists.')
+        pass
+    else:
+        print(f'{i} --- Transfer start.')
+        t1 = time.perf_counter()
+        shutil.copytree(src, des)
+        # distutils.dir_util.copy_tree(src, des)
+        time_end = time.perf_counter() - t1
+        print('%d.2 seconds' % time_end)
+    return (print(f'--- NEXT ---'))
+
+
+
+
+
 
 if __name__ == '__main__':
-    print(cea.config.Configuration().general.parent)
+    for i in generate_key_list(cea.config.Configuration()):
+        des = r'D:\BIGMACC_WESBROOK\Projects\wesbrook_2080_ssp585\{}'.format(i)
+        src = r'F:\BIGMACC_WESBROOK\Projects\wesbrook_2080_ssp585\{}'.format(i)
+        transfer(i,des,src)
+    print('Files transferred.')
+
+
+

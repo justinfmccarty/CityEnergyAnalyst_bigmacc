@@ -47,7 +47,7 @@ def create_rad_subs(config):
 
     # create dicts for each unique sets of rad files
     main_dict = dict()
-    for i in r:
+    for i in config.bigmacc.runradiation:
         main_dict[i] = []
 
     # add the keys that need to be run for the main rad file to that rad file

@@ -4,7 +4,7 @@ The BIGMACC script.
 
 import logging
 import os
-
+import time
 import pandas as pd
 
 logging.getLogger('numba').setLevel(logging.WARNING)
@@ -20,6 +20,7 @@ import cea.datamanagement.data_initializer
 import cea.analysis.costs.system_costs
 import cea.analysis.lca.main
 import cea.bigmacc.bigmacc_util as util
+import cea.bigmacc.sandbox
 import cea.bigmacc.bigmacc_operations as bigmacc
 import cea.bigmacc.netcdf_writer as netcdf_writer
 
@@ -57,10 +58,18 @@ def main(config):
         config.bigmacc.key = key
         print(config.bigmacc.key)
         try:
+
+            # cea.bigmacc.sandbox.sandbox_run(config)
             if config.bigmacc.rerun != True:
+                t1 = time.perf_counter()
                 bigmacc.run(config)
+                time_end = time.perf_counter() - t1
+                print('Completed iteration: %d.2 seconds' % time_end)
             else:
+                t1 = time.perf_counter()
                 bigmacc.rerun(config)
+                time_end = time.perf_counter() - t1
+                print('Completed iteration: %d.2 seconds' % time_end)
         except:
             print(f'THERE WAS AN ERROR IN {key}.')
             error_path = os.path.join(bigmacc_outputs_path, 'error_logger.csv')
