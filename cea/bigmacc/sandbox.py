@@ -142,6 +142,10 @@ def sandbox_run(config):
                                                 config.general.scenario_name, 'outputs', 'data', 'demand')
                 distutils.dir_util.copy_tree(old_demand_files, locator.get_demand_results_folder())
 
+        # if not os.path.exists(locator.get_demand_results_folder()):
+        #     print(' - Demand results for experiment {} not found, running radiation script.'.format(i))
+        #     cea.demand.demand_main.main(config)
+
         old_pv_files = os.path.join(config.bigmacc.data, config.general.parent, i,
                                     config.general.scenario_name, 'outputs', 'data', 'potentials', 'solar')
         if config.bigmacc.pv == True:
@@ -199,6 +203,8 @@ def sandbox_run(config):
                                         config.general.scenario_name, 'outputs', 'data')
         new_outputs_path_costs = os.path.join(config.bigmacc.data, config.general.parent, i,
                                         config.general.scenario_name, 'outputs', 'data','costs')
+        new_outputs_path_emissions = os.path.join(config.bigmacc.data, config.general.parent, i,
+                                        config.general.scenario_name, 'outputs', 'data','emissions')
         new_outputs_path_demand = os.path.join(config.bigmacc.data, config.general.parent, i,
                                         config.general.scenario_name, 'outputs', 'data','demand')
         new_outputs_path_occupancy = os.path.join(config.bigmacc.data, config.general.parent, i,
@@ -215,6 +221,7 @@ def sandbox_run(config):
             distutils.dir_util.copy_tree(locator.get_input_folder(), new_inputs_path)
         else:
             distutils.dir_util.copy_tree(locator.get_costs_folder(), new_outputs_path_costs)
+            distutils.dir_util.copy_tree(locator.get_lca_emissions_results_folder(), new_outputs_path_emissions)
             distutils.dir_util.copy_tree(locator.get_demand_results_folder(), new_outputs_path_demand)
             # distutils.dir_util.copy_tree(locator.get_schedule_model_folder(), new_outputs_path_occupancy)
             # distutils.dir_util.copy_tree(locator.get_solar_radiation_folder(), new_outputs_path_solar_radiation)
