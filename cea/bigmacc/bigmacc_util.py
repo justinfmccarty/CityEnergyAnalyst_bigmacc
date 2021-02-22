@@ -42,6 +42,31 @@ def change_key(key):
     s[6] = '0'
     return "".join(s)
 
+def create_rad_subs(config):
+    all_keys = generate_key_list(config)
+
+    # create dicts for each unique sets of rad files
+    main_dict = dict()
+    for i in r:
+        main_dict[i] = []
+
+    # add the keys that need to be run for the main rad file to that rad file
+    for key in all_keys:
+        member = change_key(key)
+        main_dict[member].append(key)
+
+    # join dicts into one list
+    main_list = []
+    for k in main_dict.keys():
+        main_list = main_list + main_dict[k]
+    return main_list
+
+
+def check_rad_files_ready(config, key):
+    if key in config.bigmacc.runradiation:
+        return False
+    else:
+        return True
 
 def print_test(item):
     print(item)

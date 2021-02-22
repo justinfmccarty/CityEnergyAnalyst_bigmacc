@@ -86,12 +86,13 @@ def log(config):
                                              'Unique Radiation': config.bigmacc.runrad}, index=[0]), ignore_index=True)
     log_df.to_csv(os.path.join(config.bigmacc.keys, 'logger.csv'))
 
+
 def change():
     os.chdir('F:\BIGMACC_WESBROOK\Projects')
 
+
 def check():
     print(os.getcwd())
-
 
 
 def writingexcel(config):
@@ -168,6 +169,58 @@ def write_pv_to_demand(config):
     demand_total.to_csv(locator.get_total_demand(format='csv'))
 
     return print('Took PV results and added them to the demand file.')
+
+
+def generate_key_list(config):
+    # https://stackoverflow.com/questions/14931769/how-to-get-all-combination-of-n-binary-value
+    key_list = []
+    elements = [list(i) for i in itertools.product([0, 1], repeat=config.bigmacc.strategies)]
+    for key in elements:
+        result = ''.join(str(i) for i in key)
+        key_list.append(result)
+
+    run_rad = config.bigmacc.runradiation
+    rad_list = run_rad.copy()
+    shorter_list = [x for x in key_list if x not in rad_list]
+    rad_list.extend(shorter_list)
+    return rad_list
+
+
+def change_key(key):
+    s = list(key)
+    s[0] = '0'
+    s[4] = '0'
+    s[5] = '0'
+    s[6] = '0'
+    return "".join(s)
+
+
+def create_rad_subs(config):
+    all_keys = generate_key_list(config)
+
+    # create dicts for each unique seof rad files
+    main_dict = dict()
+    for i in r:
+        main_dict[i] = []
+
+    # add the keys that need to be run for the main rad file to that rad file
+    for key in all_keys:
+        member = change_key(key)
+        main_dict[member].append(key)
+
+    # join dicts into one list
+    main_list = []
+    for k in main_dict.keys():
+        main_list = main_list + main_dict[k]
+    return main_list
+
+
+def check_rad_files_ready(config, key):
+    if key in config.bigmacc.runradiation:
+        return False
+    else:
+        return True
+
 
 if __name__ == '__main__':
     print(cea.config.Configuration().general.parent)

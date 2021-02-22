@@ -236,49 +236,129 @@ def run(config):
         print('END: experiment {}. \n'.format(i))
 
 
-def main(config):
-    print('STARTING UP THE BIGMACC SCRIPT')
+def rerun(config):
+    """
+    This is the main script for the bigmacc process. It iteartes through various CEA and bigmacc operations for each
+    key (i.e. 01011101). It ends by saving a sample of the hourly results across the key for each building in a netcdf
+    and then wiping the project files to reset them for the next iteration.
+
+    :param config:
+    :type config: cea.config.Configuration
+    :return:
+    """
+    locator = cea.inputlocator.InputLocator(config.scenario)
+
+    # SCENARIO SETUP ---
+    # set the key (i.e. 01010100)
+    print('Key in run')
+    i = config.bigmacc.key
+    print(i)
+
+    # set the project to the current key
+    config.general.project = os.path.join(config.bigmacc.data, config.general.parent, i)
+    print(config.general.project)
+
+    # clean up the databases
     cea.datamanagement.data_initializer.main(config)
-    key_list = util.generate_key_list(config)
 
+    # use the scenario code to set the year for the lca and other operations that need the current year
+    pathway_code = config.general.parent
+    pathway_items = pathway_code.split('_')
+    scenario_year = int(pathway_items[1])
+    config.emissions.year_to_calculate = scenario_year
+
+    # check to see if this key has been run in this iteration
     bigmacc_outputs_path = os.path.join(config.bigmacc.data, config.general.parent, 'bigmacc_out', config.bigmacc.round)
-    if os.path.exists(bigmacc_outputs_path):
+
+    scen_check = pd.read_csv(os.path.join(bigmacc_outputs_path, 'logger.csv'), index_col='Unnamed: 0')
+    experiment_key = 'exp_{}'.format(i)
+    print(experiment_key)
+    keys = [int(x) for x in str(i)]
+
+    if experiment_key in scen_check['Experiments'].values.tolist():
+        print('Experiment was finished previously, moving to next.')
         pass
     else:
-        os.mkdir(bigmacc_outputs_path)
+        print('START: experiment {}.'.format(i))
 
-    if os.path.exists(os.path.join(bigmacc_outputs_path, 'logger.csv')):
-        pass
-    else:
-        initialdf = pd.DataFrame(columns=['Experiments', 'Completed', 'Experiment Time', 'Unique Radiation'])
-        initialdf.to_csv(os.path.join(bigmacc_outputs_path, 'logger.csv'))
+        # INITIALIZE TIMER ---
+        t0 = time.perf_counter()
+        if os.path.exists(os.path.join(config.bigmacc.data, config.general.parent, i)):
+            print(' - Folder exists for experiment {}.'.format(i))
+        else:
+            os.mkdir(os.path.join(config.bigmacc.data, config.general.parent, i))
+            print(' - Folder does not exist for experiment {}, creating now.'.format(i))
 
-    for key in key_list:
-        config.bigmacc.key = key
-        print(config.bigmacc.key)
-        try:
-            run(config)
-            print(f'THERE WAS NOT AN ERROR IN {key}.')
-        except:
-            print(f'THERE WAS AN ERROR IN {key}.')
-            error_path = os.path.join(bigmacc_outputs_path, 'error_logger.csv')
+        # run the archetype mapper to leverage the newly loaded typology file and set parameters
+        print(' - Running archetype mapper for experiment {} to remove changes made in the last experiment.'.format(i))
+        cea.datamanagement.archetypes_mapper.main(config)
 
-            if os.path.exists(error_path):
-                pass
-            else:
-                initialdf = pd.DataFrame(columns=['Experiment'])
-                initialdf.to_csv(error_path)
-            error_df = pd.read_csv(error_path, index_col = 'Unnamed: 0')
-            error_df = error_df.append(pd.DataFrame({'Experiments': 'exp_{}'.format(key)}))
-            error_df.to_csv(error_path)
-            error_df.to_csv(r"C:\Users\justi\Desktop\error_log_backup.csv")
+        # run the rule checker to set the scenario parameters
+        print(' - Running rule checker for experiment {}.'.format(i))
+        cea.bigmacc.bigmacc_rules.main(config)
+
+        # SIMULATIONS ---
+
+        # running schedule maker
+        if os.path.exists(locator.get_schedule_model_file('B000')):
+            print(' - Schedules exist for experiment {}.'.format(i))
+        else:
+            print(' - Schedule maker running for experiment {}.'.format(i))
+            schedule_maker.main(config)
+
+        # check to see if we need to rerun demand or if we can copy
+
+        if keys[0] == 1:
+            print(' - Running demand simulation for experiment {}.'.format(i))
+            cea.demand.demand_main.main(config)
+        elif keys[6] == 1:
+            print(' - Running demand simulation for experiment {}.'.format(i))
+            cea.demand.demand_main.main(config)
+        else:
+            print(' - No need to rerun demand.')
+
+        # run pv simulation
+
+        # if water-body simulation is needed, run it.
+
+        # recalculating the supply split between grid and ng in the websrook DH
+        if keys[4] == 1:
+            print(' - Do not run district heat recalculation.')
+        else:
+            print(' - Run district heat recalculation.')
+            cea.bigmacc.wesbrook_DH.main(config)
+
+        if keys[7] == 1:
+            print(' - PV use detected. Adding PV generation to demand files.')
+            util.write_pv_to_demand(config)
+        else:
+            print(' - No PV use detected.')
+
+        # running the emissions and costing calculations
+        print(' - Run cost and emissions scripts.')
+        cea.analysis.costs.system_costs.main(config)
+        cea.analysis.lca.main.main(config)
+
+        # clone out the simulation inputs and outputs directory
+        print(' - Transferring results directory for experiment {}.'.format(i))
+        time_elapsed = time.perf_counter() - t0
+
+        # save log information
+        log_df = pd.read_csv(os.path.join(bigmacc_outputs_path, 'logger.csv'),
+                             index_col='Unnamed: 0')
+        log_df = log_df.append(pd.DataFrame({'Experiments': 'exp_{}'.format(i),
+                                             'Completed': 'True',
+                                             'Experiment Time': '%d.2 seconds' % time_elapsed,
+                                             'Unique Radiation': config.bigmacc.runrad}, index=[0]), ignore_index=True)
+        log_df.to_csv(os.path.join(bigmacc_outputs_path, 'logger.csv'))
+        log_df.to_csv(r"C:\Users\justi\Desktop\126logger_backup.csv", )
+
+        # write netcdf of hourly_results
+        netcdf_writer.main(config, time='hourly')
+
+        # when the setpoint is changed it is in a deeper database than the archetypes mapper can reach so reset it here
+        if keys[0] == 1:
+            cea.datamanagement.data_initializer.main(config)
+        else:
             pass
-
-    print('Writing the whole scenario netcdf.')
-    netcdf_writer.main(config, time='whole')
-
-    print('Simulations completed. Move to next scenario.')
-
-
-if __name__ == '__main__':
-    main(cea.config.Configuration())
+        print('END: experiment {}. \n'.format(i))
