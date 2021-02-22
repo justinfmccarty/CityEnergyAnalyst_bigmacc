@@ -213,7 +213,6 @@ def rule_dataframe(config):
 
     key_df['run_rad'] = key_df.apply(lambda x: runrad_rule(x['keys'], config.bigmacc.runradiation), axis=1)
     key_df['copy_rad'] = key_df.apply(lambda x: copy_key(x['keys'], config.bigmacc.runradiation), axis=1)
-    key_df.to_csv(r"C:\Users\justi\Desktop\test0.csv")
     return key_df
 
 

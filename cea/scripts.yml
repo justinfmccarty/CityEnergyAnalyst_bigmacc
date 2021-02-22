@@ -472,7 +472,7 @@ BIGMACC:
     label: bigmacc main
     description: The bigmacc loop script
     interfaces: [ cli, dashboard ]
-    module: cea.bigmacc.bigmacc
+    module: cea.bigmacc.bigmacc_main
     parameters: [ general,
                   costs,
                   water-body,
