@@ -316,6 +316,7 @@ def netcdf_hourly(config):
 
 
 def netcdf_whole(config):
+    # TODO this should run off of the hourly zarr so that we don't need to save the entire sim result each time
     whole = whole_xr_create_annual_dataset(config)
     whole_path = os.path.join(config.bigmacc.data, config.general.parent,
                               'bigmacc_out', config.bigmacc.round,
