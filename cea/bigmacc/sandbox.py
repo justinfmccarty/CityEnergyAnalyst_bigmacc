@@ -96,11 +96,11 @@ def sandbox_run(config):
         print(' - Run radiation is {}.'.format(config.bigmacc.runrad))
         print(' - Write sensor data is {}.'.format(config.radiation.write_sensor_data))
 
+        old_rad_files = os.path.join(config.bigmacc.data, config.general.parent, i,
+                                     config.general.scenario_name, 'outputs', 'data', 'solar-radiation')
         # checking on need for radiation simulation
         if i in config.bigmacc.runradiation:
             shutil.rmtree(locator.get_solar_radiation_folder())
-            old_rad_files = os.path.join(config.bigmacc.data, config.general.parent, i,
-                                         config.general.scenario_name, 'outputs', 'data', 'solar-radiation')
             if config.bigmacc.rerun == True:
                 print(' - Rerun mode, copying radiation files for experiment {}.'.format(i))
                 distutils.dir_util.copy_tree(old_rad_files, locator.get_solar_radiation_folder())
@@ -119,7 +119,7 @@ def sandbox_run(config):
         for name in bldg_names:
             if not os.path.exists(locator.get_schedule_model_file(name)):
                 print(' - Schedule maker running for building {}.'.format(name))
-                schedule_maker.schedule_maker_main(locator, config, building=name)
+                schedule_maker.schedule_maker_main(locator, config)
             else:
                 print(' - Schedules exist for building {}.'.format(name))
         print(' - Schedules exist for experiment {}.'.format(i))
@@ -142,12 +142,12 @@ def sandbox_run(config):
                                                 config.general.scenario_name, 'outputs', 'data', 'demand')
                 distutils.dir_util.copy_tree(old_demand_files, locator.get_demand_results_folder())
 
+        old_pv_files = os.path.join(config.bigmacc.data, config.general.parent, i,
+                                    config.general.scenario_name, 'outputs', 'data', 'potentials', 'solar')
         if config.bigmacc.pv == True:
             if i in config.bigmacc.runradiation:
                 shutil.rmtree(locator.solar_potential_folder())
                 if config.bigmacc.rerun == True:
-                    old_pv_files = os.path.join(config.bigmacc.data, config.general.parent, i,
-                                                config.general.scenario_name, 'outputs', 'data', 'potentials', 'solar')
                     print(' - Rerun mode, copying PV files for experiment {}.'.format(i))
                     distutils.dir_util.copy_tree(old_pv_files, locator.solar_potential_folder())
                 else:
@@ -197,20 +197,41 @@ def sandbox_run(config):
                                        config.general.scenario_name, 'inputs')
         new_outputs_path = os.path.join(config.bigmacc.data, config.general.parent, i,
                                         config.general.scenario_name, 'outputs', 'data')
+        new_outputs_path_costs = os.path.join(config.bigmacc.data, config.general.parent, i,
+                                        config.general.scenario_name, 'outputs', 'data','costs')
+        new_outputs_path_demand = os.path.join(config.bigmacc.data, config.general.parent, i,
+                                        config.general.scenario_name, 'outputs', 'data','demand')
+        new_outputs_path_occupancy = os.path.join(config.bigmacc.data, config.general.parent, i,
+                                        config.general.scenario_name, 'outputs', 'data','occupancy')
+        new_outputs_path_solar_radiation = os.path.join(config.bigmacc.data, config.general.parent, i,
+                                        config.general.scenario_name, 'outputs', 'data','solar-radiation')
+        new_outputs_path_solar_potential = os.path.join(config.bigmacc.data, config.general.parent, i,
+                                        config.general.scenario_name, 'outputs', 'data','potentials','solar')
+        new_outputs_path_water = os.path.join(config.bigmacc.data, config.general.parent, i,
+                                        config.general.scenario_name, 'outputs', 'data','potentials','Water_body_potential.csv')
 
-        distutils.dir_util.copy_tree(locator.get_data_results_folder(), new_outputs_path)
-        distutils.dir_util.copy_tree(locator.get_input_folder(), new_inputs_path)
+        if config.bigmacc.rerun != True:
+            distutils.dir_util.copy_tree(locator.get_data_results_folder(), new_outputs_path)
+            distutils.dir_util.copy_tree(locator.get_input_folder(), new_inputs_path)
+        else:
+            distutils.dir_util.copy_tree(locator.get_costs_folder(), new_outputs_path_costs)
+            distutils.dir_util.copy_tree(locator.get_demand_results_folder(), new_outputs_path_demand)
+            # distutils.dir_util.copy_tree(locator.get_schedule_model_folder(), new_outputs_path_occupancy)
+            # distutils.dir_util.copy_tree(locator.get_solar_radiation_folder(), new_outputs_path_solar_radiation)
+            # distutils.dir_util.copy_tree(locator.solar_potential_folder(), new_outputs_path_solar_potential)
+            # distutils.dir_util.copy_tree(locator.get_water_body_potential(), new_outputs_path_water)
 
-        if keys[6] != 1:
-            old_water_files = os.path.join(config.bigmacc.data, config.general.parent, i,
-                                           config.general.scenario_name, 'outputs', 'data', 'potentials',
-                                           'Water_body_potential.csv')
-            if os.path.exists(old_water_files):
-                os.remove(old_water_files)
 
-        if keys[7] != 1:
-            if os.path.exists(old_pv_files):
-                shutil.rmtree(old_pv_files)
+        # old_water_files = os.path.join(config.bigmacc.data, config.general.parent, i,
+        #                                config.general.scenario_name, 'outputs', 'data', 'potentials',
+        #                                'Water_body_potential.csv')
+        # if keys[6] != 1:
+        #     if os.path.exists(old_water_files):
+        #         os.remove(old_water_files)
+        #
+        # if keys[7] != 1:
+        #     if os.path.exists(old_pv_files):
+        #         shutil.rmtree(old_pv_files)
 
         time_elapsed = time.perf_counter() - t0
 

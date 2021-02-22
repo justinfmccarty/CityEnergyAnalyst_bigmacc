@@ -25,7 +25,6 @@ import cea.bigmacc.deprecated.copy_results
 import cea.datamanagement.archetypes_mapper
 import zipfile
 import cea.utilities.dbf
-
 import cea.bigmacc.bigmacc_util as util
 import cea.bigmacc.create_rule_dataframe
 # import numpy as np
@@ -223,4 +222,4 @@ def check_rad_files_ready(config, key):
 
 
 if __name__ == '__main__':
-    print(cea.config.Configuration().general.parent)
+    print(util.create_rad_subs(cea.config.Configuration()))

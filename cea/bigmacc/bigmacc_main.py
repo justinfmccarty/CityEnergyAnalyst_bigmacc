@@ -4,6 +4,7 @@ The BIGMACC script.
 
 import logging
 import os
+import time
 
 import pandas as pd
 
@@ -19,6 +20,7 @@ import cea.datamanagement.archetypes_mapper
 import cea.datamanagement.data_initializer
 import cea.analysis.costs.system_costs
 import cea.analysis.lca.main
+import cea.bigmacc.sandbox
 import cea.bigmacc.bigmacc_util as util
 import cea.bigmacc.bigmacc_operations as bigmacc
 import cea.bigmacc.netcdf_writer as netcdf_writer
@@ -36,7 +38,7 @@ __status__ = ""
 def main(config):
     print('STARTING UP THE BIGMACC SCRIPT')
     cea.datamanagement.data_initializer.main(config)
-    key_list = util.generate_key_list(config)
+    key_list = util.create_rad_subs(config)
 
     # look for special outputs path, make if not there
     bigmacc_outputs_path = os.path.join(config.bigmacc.data, config.general.parent, 'bigmacc_out', config.bigmacc.round)
@@ -57,10 +59,14 @@ def main(config):
         config.bigmacc.key = key
         print(config.bigmacc.key)
         try:
-            if config.bigmacc.rerun != True:
-                bigmacc.run(config)
-            else:
-                bigmacc.rerun(config)
+            t1 = time.perf_counter()
+            cea.bigmacc.sandbox.sandbox_run(config)
+            time_end = time.perf_counter() - t1
+            print('Completed iteration: %d.2 seconds' % time_end)
+            # if config.bigmacc.rerun != True:
+            #     bigmacc.run(config)
+            # else:
+            #     bigmacc.rerun(config)
         except:
             print(f'THERE WAS AN ERROR IN {key}.')
             error_path = os.path.join(bigmacc_outputs_path, 'error_logger.csv')
@@ -76,7 +82,7 @@ def main(config):
             error_df.to_csv(r"C:\Users\justi\Desktop\error_log_backup.csv")
 
     print('Writing the whole scenario netcdf.')
-    netcdf_writer.main(config, time='whole')
+    # netcdf_writer.main(config, time='whole')
 
     print('Simulations completed. Move to next scenario.')
 

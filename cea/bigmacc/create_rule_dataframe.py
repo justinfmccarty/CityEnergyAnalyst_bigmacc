@@ -156,7 +156,6 @@ def PV_GR_PH_rule(key, PV_GR_PH_value):  # ALL BUILDINGS HAVE ROOFTOP PV AND GRE
         return np.nan
 
 
-# noinspection PyTypeChecker
 def rule_dataframe(config):
     print('key in dataframe')
     print(config.bigmacc.key)
@@ -217,9 +216,7 @@ def rule_dataframe(config):
 
 
 def main(config):
-    key_list = util.generate_key_list(config)
-    # run_rad = config.bigmacc.runradiation
-    # return rule_dataframe(key_list,run_rad)
+    print(' - Rule dataframe created.')
     return rule_dataframe(config)
 
 
