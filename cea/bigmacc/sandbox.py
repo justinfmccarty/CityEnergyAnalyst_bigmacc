@@ -269,31 +269,53 @@ def sandbox_run(config):
         print('END: experiment {}. \n'.format(i))
 
 
-def somehting():
-
-        done = []
-        # enter the iteration loop
-        for key in key_list:
-            check_path = os.path.join(config.bigmacc.data, config.general.parent,
-                                      'bigmacc_out', config.bigmacc.round,
-                                      f"hourly_{config.general.parent}_{config.bigmacc.key}")
-            if os.path.exists(check_path):
-                print(f' - Completed rewrite of PV for {key}.')
-                pass
-            else:
-                config.bigmacc.key = key
-                config.general.project = os.path.join(config.bigmacc.data, config.general.parent, key)
-                print(' - - - - - - Move to next - - - - - - ')
-                print(config.general.project)
-                keys = [int(x) for x in str(key)]
-                if keys[7] == 1:
-                    print(' - PV use detected. Adding PV generation to demand files.')
-                    util.write_pv_to_demand(config)
-                    done.append(key)
-                    cea.analysis.costs.system_costs.main(config)
-                    cea.analysis.lca.main.main(config)
-                    netcdf_writer.main(config, time='hourly')
-                else:
-                    print(' - No PV use detected.')
 
 
+from multiprocessing import pool as Pool
+
+
+
+if __name__ == '__main__':
+    config = cea.config.Configuration()
+
+    print(config.general.project)
+    pv_total = pd.read_csv(locator.PV_total_buildings(), index_col='Name')
+    demand_total = pd.read_csv(locator.get_total_demand(format='csv'), index_col='Name')
+
+
+    pool = Pool()  # Create a multiprocessing Pool
+    pool.map(process, locator, bldg)
+        # write bldg to file
+    # write total to file
+demand_total.to_csv(locator.get_total_demand(format='csv'))
+
+  # - - - -
+
+def multiprocess_write_pv(config):
+    def test_process(locator, bldg):
+        print(locator.get_demand_results_file(bldg, format='csv'))
+
+    def process(locator, bldg):
+        print(bldg)
+        pv_bldg = pd.read_csv(locator.PV_results(bldg))
+        hourly_results = locator.get_demand_results_file(bldg, format='csv')
+        df_demand = pd.read_csv(hourly_results)
+        df_demand['PV_kWh'] = 0
+        df_demand['PV_kWh'] = pv_bldg['E_PV_gen_kWh'].astype(float)
+        df_demand['GRID_kWh'] = df_demand[['GRID_a_kWh', 'GRID_l_kWh', 'GRID_v_kWh', 'GRID_ve_kWh', 'GRID_data_kWh',
+                                           'GRID_pro_kWh', 'GRID_aux_kWh', 'GRID_ww_kWh', 'GRID_hs_kWh',
+                                           'GRID_cs_kWh', 'GRID_cdata_kWh', 'GRID_cre_kWh']].sum(axis=1)
+        df_demand['GRID_kWh'] = np.clip(df_demand['GRID_kWh'] - df_demand['PV_kWh'], 0, None)
+        demand_total.loc[bldg]['PV_MWhyr'] = df_demand['PV_kWh'].sum() / 1000
+        demand_total.loc[bldg]['GRID_MWhyr'] = df_demand['GRID_kWh'].sum() / 1000
+        df_demand.to_csv(hourly_results)
+
+    locator = cea.inputlocator.InputLocator(config.scenario)
+    bldg_list = pv_total.index.to_list()
+
+    n = len(bldg_list)
+    calc = cea.utilities.parallel.vectorize(test_process, config.get_number_of_processes())
+
+    calc(
+        repeat(locator, n),
+        bldg_list)

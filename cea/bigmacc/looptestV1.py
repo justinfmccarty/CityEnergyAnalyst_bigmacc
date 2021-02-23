@@ -197,55 +197,6 @@ def change_key(key):
     s[6] = '0'
     return "".join(s)
 
-
-def create_rad_subs(config):
-    all_keys = generate_key_list(config)
-
-    # create dicts for each unique seof rad files
-    main_dict = dict()
-    for i in r:
-        main_dict[i] = []
-
-    # add the keys that need to be run for the main rad file to that rad file
-    for key in all_keys:
-        member = change_key(key)
-        main_dict[member].append(key)
-
-    # join dicts into one list
-    main_list = []
-    for k in main_dict.keys():
-        main_list = main_list + main_dict[k]
-    return main_list
-
-
-def write_PV(config):
-    key_list = util.create_rad_subs(config)
-
-    done_dict =dict()
-    # enter the iteration loop
-    for key in key_list[1:8]:
-        config.general.project = os.path.join(config.bigmacc.data, config.general.parent, key)
-        print(config.general.project)
-        keys = [int(x) for x in str(key)]
-        if keys[7] == 1:
-            print(' - PV use detected. Adding PV generation to demand files.')
-            util.write_pv_to_demand_alt(config,key)
-            done_dict[key] = 'Yes'
-            # cea.analysis.costs.system_costs.main(config)
-            # cea.analysis.lca.main.main(config)
-            # netcdf_writer.main(config, time='hourly')
-
-        else:
-            print(' - No PV use detected.')
-
-    rewrite_pv_path = os.path.join(config.bigmacc.data,
-                                   config.general.parent,
-                                   'bigmacc-out',
-                                   config.bigmacc.round)
-    log_df = pd.DataFrame(done_dict)
-    print(log_df)
-    # log_df.to_csv(os.path.join(rewrite_pv_path, 'pv_rewrite_logger.csv'))
-
 def transfer(i,des,src):
 
     if os.path.exists(des):
@@ -266,6 +217,8 @@ def write_PV(config):
     done = []
     # enter the iteration loop
     for key in key_list:
+        config.bigmacc.key = key
+        config.general.project = os.path.join(config.bigmacc.data, config.general.parent, key)
         check_path = os.path.join(config.bigmacc.data, config.general.parent,
                                   'bigmacc_out', config.bigmacc.round,
                                   f"hourly_{config.general.parent}_{config.bigmacc.key}")
@@ -273,8 +226,6 @@ def write_PV(config):
             print(f' - Completed rewrite of PV for {key}.')
             pass
         else:
-            config.bigmacc.key = key
-            config.general.project = os.path.join(config.bigmacc.data, config.general.parent, key)
             print(' - - - - - - Move to next - - - - - - ')
             print(config.general.project)
             keys = [int(x) for x in str(key)]
