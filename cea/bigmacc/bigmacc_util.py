@@ -102,6 +102,7 @@ def write_pv_to_demand(config):
     demand_total = pd.read_csv(locator.get_total_demand(format='csv'), index_col='Name')
 
     for bldg in pv_total.index.to_list():
+        print(bldg)
         pv_bldg = pd.read_csv(locator.PV_results(bldg))
         hourly_results = locator.get_demand_results_file(bldg, format='csv')
         df_demand = pd.read_csv(hourly_results)

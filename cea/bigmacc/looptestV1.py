@@ -266,21 +266,27 @@ def write_PV(config):
     done = []
     # enter the iteration loop
     for key in key_list:
-        config.bigmacc.key = key
-        config.general.project = os.path.join(config.bigmacc.data, config.general.parent, key)
-        print(' - - - - - - Move to next - - - - - - ')
-        print(config.general.project)
-        keys = [int(x) for x in str(key)]
-        if keys[7] == 1:
-            print(' - PV use detected. Adding PV generation to demand files.')
-            util.write_pv_to_demand(config)
-            done.append(key)
-            cea.analysis.costs.system_costs.main(config)
-            cea.analysis.lca.main.main(config)
-            netcdf_writer.main(config, time='hourly')
-
+        check_path = os.path.join(config.bigmacc.data, config.general.parent,
+                                  'bigmacc_out', config.bigmacc.round,
+                                  f"hourly_{config.general.parent}_{config.bigmacc.key}")
+        if os.path.exists(check_path):
+            print(f' - Completed rewrite of PV for {key}.')
+            pass
         else:
-            print(' - No PV use detected.')
+            config.bigmacc.key = key
+            config.general.project = os.path.join(config.bigmacc.data, config.general.parent, key)
+            print(' - - - - - - Move to next - - - - - - ')
+            print(config.general.project)
+            keys = [int(x) for x in str(key)]
+            if keys[7] == 1:
+                print(' - PV use detected. Adding PV generation to demand files.')
+                util.write_pv_to_demand(config)
+                done.append(key)
+                cea.analysis.costs.system_costs.main(config)
+                cea.analysis.lca.main.main(config)
+                netcdf_writer.main(config, time='hourly')
+            else:
+                print(' - No PV use detected.')
 
     rewrite_pv_path = os.path.join(config.bigmacc.data,
                                    config.general.parent,
