@@ -97,11 +97,11 @@ def get_key(df):
 
 def write_pv_to_demand(config):
     locator = cea.inputlocator.InputLocator(config.scenario)
-
+    print(config.general.project)
     pv_total = pd.read_csv(locator.PV_total_buildings(), index_col='Name')
     demand_total = pd.read_csv(locator.get_total_demand(format='csv'), index_col='Name')
 
-    for bldg in pv_total.index.to_list()[1:8]:
+    for bldg in pv_total.index.to_list():
         pv_bldg = pd.read_csv(locator.PV_results(bldg))
         hourly_results = locator.get_demand_results_file(bldg, format='csv')
         df_demand = pd.read_csv(hourly_results)

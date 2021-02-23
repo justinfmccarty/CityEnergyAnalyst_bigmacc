@@ -5,7 +5,7 @@ The BIGMACC script.
 import logging
 import os
 import time
-
+import winsound
 import pandas as pd
 
 logging.getLogger('numba').setLevel(logging.WARNING)
@@ -80,9 +80,13 @@ def main(config):
             error_df = error_df.append(pd.DataFrame({'Experiments': 'exp_{}'.format(key)}))
             error_df.to_csv(error_path)
             error_df.to_csv(r"C:\Users\justi\Desktop\error_log_backup.csv")
-
+    duration = 1000  # milliseconds
+    freq = 440  # Hz
+    winsound.Beep(freq, duration)
     print('Writing the whole scenario netcdf.')
-    # netcdf_writer.main(config, time='whole')
+    netcdf_writer.main(config, time='whole')
+    winsound.Beep(freq, duration)
+
 
     print('Simulations completed. Move to next scenario.')
 

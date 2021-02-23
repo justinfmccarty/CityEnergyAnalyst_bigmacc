@@ -261,7 +261,7 @@ def whole_xr_get_annual_results_bldg(config, strategy):
     hours_below_15C_dict = dict()
 
     for bldg in buildings.tolist():
-        print(f' - Adding {bldg} to the dataarray.')
+        # print(f' - Adding {bldg} to the dataarray.')
         data = hourly_xr_get_hourly_results(config, scenario, strategy, bldg)
         hours_above_cool_sb_dict[bldg] = (data['T_int_C'].values > indoor_comfort_df.loc[bldg]['Tcs_setb_C']).sum()
         hours_below_heat_sb_dict[bldg] = (data['T_int_C'].values < indoor_comfort_df.loc[bldg]['Ths_setb_C']).sum()

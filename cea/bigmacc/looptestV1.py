@@ -7,7 +7,10 @@ NOTE: ADD YOUR SCRIPT'S DOCUMENTATION HERE (what, why, include literature refere
 # import cea.bigmacc.bigmacc_util as util
 import cea.resources.radiation_daysim.radiation_main
 import os
+import winsound
 import xlsxwriter
+import cea.bigmacc.netcdf_writer as netcdf_writer
+
 import itertools
 import numpy as np
 import cea.analysis.costs.system_costs
@@ -215,11 +218,33 @@ def create_rad_subs(config):
     return main_list
 
 
-def check_rad_files_ready(config, key):
-    if key in config.bigmacc.runradiation:
-        return False
-    else:
-        return True
+def write_PV(config):
+    key_list = util.create_rad_subs(config)
+
+    done_dict =dict()
+    # enter the iteration loop
+    for key in key_list[1:8]:
+        config.general.project = os.path.join(config.bigmacc.data, config.general.parent, key)
+        print(config.general.project)
+        keys = [int(x) for x in str(key)]
+        if keys[7] == 1:
+            print(' - PV use detected. Adding PV generation to demand files.')
+            util.write_pv_to_demand_alt(config,key)
+            done_dict[key] = 'Yes'
+            # cea.analysis.costs.system_costs.main(config)
+            # cea.analysis.lca.main.main(config)
+            # netcdf_writer.main(config, time='hourly')
+
+        else:
+            print(' - No PV use detected.')
+
+    rewrite_pv_path = os.path.join(config.bigmacc.data,
+                                   config.general.parent,
+                                   'bigmacc-out',
+                                   config.bigmacc.round)
+    log_df = pd.DataFrame(done_dict)
+    print(log_df)
+    # log_df.to_csv(os.path.join(rewrite_pv_path, 'pv_rewrite_logger.csv'))
 
 def transfer(i,des,src):
 
@@ -235,17 +260,48 @@ def transfer(i,des,src):
         print('%d.2 seconds' % time_end)
     return (print(f'--- NEXT ---'))
 
+def write_PV(config):
+    key_list = util.create_rad_subs(config)
 
+    done = []
+    # enter the iteration loop
+    for key in key_list:
+        config.bigmacc.key = key
+        config.general.project = os.path.join(config.bigmacc.data, config.general.parent, key)
+        print(' - - - - - - Move to next - - - - - - ')
+        print(config.general.project)
+        keys = [int(x) for x in str(key)]
+        if keys[7] == 1:
+            print(' - PV use detected. Adding PV generation to demand files.')
+            util.write_pv_to_demand(config)
+            done.append(key)
+            cea.analysis.costs.system_costs.main(config)
+            cea.analysis.lca.main.main(config)
+            netcdf_writer.main(config, time='hourly')
 
+        else:
+            print(' - No PV use detected.')
 
+    rewrite_pv_path = os.path.join(config.bigmacc.data,
+                                   config.general.parent,
+                                   'bigmacc-out',
+                                   config.bigmacc.round)
+    log_df = pd.DataFrame(pd.Series(done,name='completed'))
+    print(log_df)
+    log_df.to_csv(os.path.join(rewrite_pv_path, 'pv_rewrite_logger.csv'))
+    duration = 2000  # milliseconds
+    freq = 440  # Hz
+    winsound.Beep(freq, duration)
+
+def write_test():
+    path = r"C:\Users\justi\Desktop\Total_demand.csv"
+    df = pd.read_csv(path,index_col='Name')
+    path2 = r"C:\Users\justi\Desktop\Total_demand_alt.csv"
+    df.to_csv(path2, float_format='%.3f', na_rep=0)
 
 
 if __name__ == '__main__':
-    for i in generate_key_list(cea.config.Configuration()):
-        des = r'D:\BIGMACC_WESBROOK\Projects\wesbrook_2080_ssp585\{}'.format(i)
-        src = r'F:\BIGMACC_WESBROOK\Projects\wesbrook_2080_ssp585\{}'.format(i)
-        transfer(i,des,src)
-    print('Files transferred.')
+    write_PV(cea.config.Configuration())
 
 
 
