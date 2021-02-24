@@ -15,7 +15,8 @@ import cea.inputlocator
 import cea.demand.demand_main
 import cea.resources.radiation_daysim.radiation_main
 import cea.bigmacc.bigmacc_rules
-import cea.bigmacc.wesbrook_DH
+import cea.bigmacc.wesbrook_DH_multi
+import cea.bigmacc.wesbrook_DH_single
 import cea.datamanagement.archetypes_mapper
 import cea.datamanagement.data_initializer
 import cea.analysis.costs.system_costs
@@ -506,7 +507,11 @@ def run_bigmacc(config):
             print(' - Do not run district heat recalculation.')
         else:
             print(' - Run district heat recalculation.')
-            cea.bigmacc.wesbrook_DH.main(config)
+            if len(config.demand.buildings) > 50:
+                cea.bigmacc.wesbrook_DH_multi.main(config)
+            else:
+                cea.bigmacc.wesbrook_DH_single.main(config)
+
 
         # include PV results in demand results files for costing and emissions
         if keys[7] == 1:

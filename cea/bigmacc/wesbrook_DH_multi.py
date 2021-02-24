@@ -5,6 +5,7 @@ demand files.
 """
 
 import pandas as pd
+import time
 import logging
 logging.getLogger('numba').setLevel(logging.WARNING)
 from itertools import repeat
@@ -20,7 +21,6 @@ import cea.datamanagement.data_initializer
 import cea.analysis.costs.system_costs
 import cea.analysis.lca.main
 import cea.utilities.dbf
-
 
 __author__ = "Justin McCarty"
 __copyright__ = ""
@@ -121,6 +121,70 @@ def calc_district_demand(df):
     return df[['ng_source_demand', 'hp_source_demand']]
 
 
+def write_ng_hs(loc, bl, hp_h, hp_ww, ng_h, ng_ww):
+    hourly_results = loc.get_demand_results_file(bl, 'csv')
+    df_demand = pd.read_csv(hourly_results)
+    df_demand['GRID_hs_kWh'] = hp_h.loc[bl]
+    df_demand['E_hs_kWh'] = hp_h.loc[bl]
+    df_demand['NG_hs_kWh'] = ng_h.loc[bl]
+    df_demand['DH_hs_kWh'] = 0
+
+    df_demand['GRID_ww_kWh'] = hp_ww.loc[bl]
+    df_demand['E_ww_kWh'] = ng_h.loc[bl]
+    df_demand['NG_ww_kWh'] = ng_ww.loc[bl]
+    df_demand['DH_ww_kWh'] = 0
+
+    df_demand['GRID_kWh'] = df_demand[['GRID_a_kWh', 'GRID_l_kWh', 'GRID_v_kWh', 'GRID_ve_kWh', 'GRID_data_kWh',
+                                       'GRID_pro_kWh', 'GRID_aux_kWh', 'GRID_ww_kWh', 'GRID_hs_kWh',
+                                       'GRID_cs_kWh', 'GRID_cdata_kWh', 'GRID_cre_kWh']].sum(axis=1)
+
+    df_demand['E_sys_kWh'] = df_demand[['Eal_kWh', 'Ea_kWh', 'El_kWh', 'Ev_kWh', 'Eve_kWh', 'Edata_kWh',
+                                        'Epro_kWh', 'Eaux_kWh', 'E_ww_kWh', 'E_hs_kWh', 'E_cs_kWh',
+                                        'E_cre_kWh', 'E_cdata_kWh']].sum(axis=1)
+    df_demand.to_csv(hourly_results)
+    return
+
+
+def write_hs(loc, bl,hp_h,ng_h):
+    # open bldg demand file and replace _ww_kWh with following
+    print(' - - - Resetting results for all district heat buildings...')
+    hourly_results = loc.get_demand_results_file(bl, 'csv')
+    df_demand = pd.read_csv(hourly_results)
+    df_demand['GRID_hs_kWh'] = hp_h.loc[bl]
+    df_demand['E_hs_kWh'] = hp_h.loc[bl]
+    df_demand['NG_hs_kWh'] = ng_h.loc[bl]
+    df_demand['DH_hs_kWh'] = 0
+
+    df_demand.to_csv(hourly_results)
+    return
+
+
+def write_ng(loc, bl, hp_ww, ng_ww):
+    # open bldg demand file and replace _ww_kWh with following
+    print(' - - - Resetting results for district hot water bldgs...')
+    hourly_results = loc.get_demand_results_file(bl, 'csv')
+    df_demand = pd.read_csv(hourly_results)
+    df_demand['GRID_ww_kWh'] = hp_ww.loc[bl]
+    df_demand['E_ww_kWh'] = hp_ww.loc[bl]
+    df_demand['NG_ww_kWh'] = ng_ww.loc[bl]
+    df_demand['DH_ww_kWh'] = 0
+    df_demand.to_csv(hourly_results)
+    return
+
+
+def write_both(loc, bl):
+    hourly_results = loc.get_demand_results_file(bl, 'csv')
+    df_demand = pd.read_csv(hourly_results)
+    df_demand['GRID_kWh'] = df_demand[['GRID_a_kWh', 'GRID_l_kWh', 'GRID_v_kWh', 'GRID_ve_kWh', 'GRID_data_kWh',
+                                       'GRID_pro_kWh', 'GRID_aux_kWh', 'GRID_ww_kWh', 'GRID_hs_kWh',
+                                       'GRID_cs_kWh', 'GRID_cdata_kWh', 'GRID_cre_kWh']].sum(axis=1)
+
+    df_demand['E_sys_kWh'] = df_demand[['Eal_kWh', 'Ea_kWh', 'El_kWh', 'Ev_kWh', 'Eve_kWh', 'Edata_kWh',
+                                        'Epro_kWh', 'Eaux_kWh', 'E_ww_kWh', 'E_hs_kWh', 'E_cs_kWh',
+                                        'E_cre_kWh', 'E_cdata_kWh']].sum(axis=1)
+    df_demand.to_csv(hourly_results)
+    return
+
 def recalc_DH(config):
     # TODO rewrite so the district heat and district hot water can run independentely
     locator = cea.inputlocator.InputLocator(config.scenario)
@@ -135,12 +199,14 @@ def recalc_DH(config):
     for bldg in on_DH_hs:
         heat_df = heat_df.append(demand_source(locator, bldg, 'Qhs_sys_kWh'))
     heat_df['Name'] = heat_df.index
+    print(' - - Done')
 
     dhw_df = pd.DataFrame()
     print(' - - - Gathering DHW...')
     for bldg in on_DH_dhw:
         dhw_df = dhw_df.append(demand_source(locator, bldg, 'Qww_sys_kWh'))
     dhw_df['Name'] = dhw_df.index
+    print(' - - Done')
 
     demand_df = pd.concat([heat_df, dhw_df], ignore_index=True).groupby(['Name'], as_index=False).sum()
     demand_df = demand_df.set_index(demand_df['Name'], drop=True)
@@ -154,6 +220,7 @@ def recalc_DH(config):
 
     def calc_share(demand, total):
         return demand / total
+
     print(' - - - Calculating share of district heat load...')
 
     heat_df_share = heat_df.apply(lambda x: calc_share(x, heat_df.loc['total']), axis=1)
@@ -175,34 +242,15 @@ def recalc_DH(config):
     if on_DH_hs == on_DH_dhw:
         print(' - - - Changing results for all bldgs...')
 
-        def write_ng_hs(locator, bldg):
-            hourly_results = locator.get_demand_results_file(bldg, 'csv')
-            df_demand = pd.read_csv(hourly_results)
-            df_demand['GRID_hs_kWh'] = hp_heat.loc[bldg]
-            df_demand['E_hs_kWh'] = hp_heat.loc[bldg]
-            df_demand['NG_hs_kWh'] = ng_heat.loc[bldg]
-            df_demand['DH_hs_kWh'] = 0
-
-            df_demand['GRID_ww_kWh'] = hp_dhw.loc[bldg]
-            df_demand['E_ww_kWh'] = ng_heat.loc[bldg]
-            df_demand['NG_ww_kWh'] = ng_dhw.loc[bldg]
-            df_demand['DH_ww_kWh'] = 0
-
-            df_demand['GRID_kWh'] = df_demand[['GRID_a_kWh', 'GRID_l_kWh', 'GRID_v_kWh', 'GRID_ve_kWh', 'GRID_data_kWh',
-                                               'GRID_pro_kWh', 'GRID_aux_kWh', 'GRID_ww_kWh', 'GRID_hs_kWh',
-                                               'GRID_cs_kWh', 'GRID_cdata_kWh', 'GRID_cre_kWh']].sum(axis=1)
-
-            df_demand['E_sys_kWh'] = df_demand[['Eal_kWh', 'Ea_kWh', 'El_kWh', 'Ev_kWh', 'Eve_kWh', 'Edata_kWh',
-                                                'Epro_kWh', 'Eaux_kWh', 'E_ww_kWh', 'E_hs_kWh', 'E_cs_kWh',
-                                                'E_cre_kWh', 'E_cdata_kWh']].sum(axis=1)
-            df_demand.to_csv(hourly_results)
-
-
         n = len(all_bldgs)
         calc_hourly = cea.utilities.parallel.vectorize(write_ng_hs, config.get_number_of_processes())
         calc_hourly(
             repeat(locator, n),
-            all_bldgs)
+            all_bldgs,
+            repeat(hp_heat,n),
+            repeat(hp_dhw,n),
+            repeat(ng_heat,n),
+            repeat(ng_dhw,n))
 
         # for bldg in all_bldgs:
         #     # open bldg demand file and replace _ww_kWh with following
@@ -228,23 +276,13 @@ def recalc_DH(config):
         #     df_demand.to_csv(hourly_results)
 
     else:
-        def write_hs(locator, bldg):
-            # open bldg demand file and replace _ww_kWh with following
-            print(' - - - Resetting results for all district heat buildings...')
-            hourly_results = locator.get_demand_results_file(bldg, 'csv')
-            df_demand = pd.read_csv(hourly_results)
-            df_demand['GRID_hs_kWh'] = hp_heat.loc[bldg]
-            df_demand['E_hs_kWh'] = hp_heat.loc[bldg]
-            df_demand['NG_hs_kWh'] = ng_heat.loc[bldg]
-            df_demand['DH_hs_kWh'] = 0
-
-            df_demand.to_csv(hourly_results)
-
         n = len(on_DH_hs)
         calc_hourly = cea.utilities.parallel.vectorize(write_hs, config.get_number_of_processes())
         calc_hourly(
             repeat(locator, n),
-            on_DH_hs)
+            on_DH_hs,
+            repeat(hp_heat, n),
+            repeat(ng_heat, n))
 
         # for bldg in on_DH_hs:
         #     # open bldg demand file and replace _ww_kWh with following
@@ -258,22 +296,13 @@ def recalc_DH(config):
         #
         #     df_demand.to_csv(hourly_results)
 
-        def write_ng(locator, bldg):
-            # open bldg demand file and replace _ww_kWh with following
-            print(' - - - Resetting results for district hot water bldgs...')
-            hourly_results = locator.get_demand_results_file(bldg, 'csv')
-            df_demand = pd.read_csv(hourly_results)
-            df_demand['GRID_ww_kWh'] = hp_dhw.loc[bldg]
-            df_demand['E_ww_kWh'] = hp_dhw.loc[bldg]
-            df_demand['NG_ww_kWh'] = ng_dhw.loc[bldg]
-            df_demand['DH_ww_kWh'] = 0
-            df_demand.to_csv(hourly_results)
-
         n = len(on_DH_dhw)
         calc_hourly = cea.utilities.parallel.vectorize(write_ng, config.get_number_of_processes())
         calc_hourly(
             repeat(locator, n),
-            on_DH_dhw)
+            on_DH_dhw,
+            repeat(hp_dhw, n),
+            repeat(ng_dhw, n))
 
         # for bldg in on_DH_dhw:
         #     # open bldg demand file and replace _ww_kWh with following
@@ -285,18 +314,6 @@ def recalc_DH(config):
         #     df_demand['NG_ww_kWh'] = ng_dhw.loc[bldg]
         #     df_demand['DH_ww_kWh'] = 0
         #     df_demand.to_csv(hourly_results)
-
-        def write_both(loactor, bldg):
-            hourly_results = locator.get_demand_results_file(bldg, 'csv')
-            df_demand = pd.read_csv(hourly_results)
-            df_demand['GRID_kWh'] = df_demand[['GRID_a_kWh', 'GRID_l_kWh', 'GRID_v_kWh', 'GRID_ve_kWh', 'GRID_data_kWh',
-                                               'GRID_pro_kWh', 'GRID_aux_kWh', 'GRID_ww_kWh', 'GRID_hs_kWh',
-                                               'GRID_cs_kWh', 'GRID_cdata_kWh', 'GRID_cre_kWh']].sum(axis=1)
-
-            df_demand['E_sys_kWh'] = df_demand[['Eal_kWh', 'Ea_kWh', 'El_kWh', 'Ev_kWh', 'Eve_kWh', 'Edata_kWh',
-                                                'Epro_kWh', 'Eaux_kWh', 'E_ww_kWh', 'E_hs_kWh', 'E_cs_kWh',
-                                                'E_cre_kWh', 'E_cdata_kWh']].sum(axis=1)
-            df_demand.to_csv(hourly_results)
 
         n = len(all_bldgs)
         calc_hourly = cea.utilities.parallel.vectorize(write_both, config.get_number_of_processes())
@@ -315,7 +332,6 @@ def recalc_DH(config):
         #                                         'Epro_kWh', 'Eaux_kWh', 'E_ww_kWh', 'E_hs_kWh', 'E_cs_kWh',
         #                                         'E_cre_kWh', 'E_cdata_kWh']].sum(axis=1)
         #     df_demand.to_csv(hourly_results)
-
 
     return print(' - District heating recalculated!')
 
@@ -356,7 +372,7 @@ def rewrite_to_csv(config):
     #     df_ann.loc[bldg]['GRID_ww0_kW'] = df_hourly['GRID_ww_kWh'].max()
     #     df_ann.loc[bldg]['E_ww0_kW'] = df_hourly['E_ww_kWh'].max()
     #     df_ann.loc[bldg]['NG_ww0_kW'] = df_hourly['NG_ww_kWh'].max()
-    #
+
     # n = len(all_bldgs)
     # calc_hourly = cea.utilities.parallel.vectorize(annual_results_write, config.get_number_of_processes())
     # calc_hourly(
@@ -390,20 +406,31 @@ def rewrite_to_csv(config):
         df_ann.loc[bldg]['NG_ww0_kW'] = df_hourly['NG_ww_kWh'].max()
 
     df_ann['GRID0_kW'] = df_ann[['GRID_a0_kW', 'GRID_l0_kW', 'GRID_v0_kW', 'GRID_ve0_kW', 'GRID_data0_kW',
-                                       'GRID_pro0_kW', 'GRID_aux0_kW', 'GRID_ww0_kW', 'GRID_hs0_kW',
-                                       'GRID_cs0_kW', 'GRID_cdata0_kW', 'GRID_cre0_kW']].sum(axis=1)
+                                 'GRID_pro0_kW', 'GRID_aux0_kW', 'GRID_ww0_kW', 'GRID_hs0_kW',
+                                 'GRID_cs0_kW', 'GRID_cdata0_kW', 'GRID_cre0_kW']].sum(axis=1)
 
     df_ann['E_sys0_kW'] = df_ann[['Eal0_kW', 'Ea0_kW', 'El0_kW', 'Ev0_kW', 'Eve0_kW', 'Edata0_kW',
-                                        'Epro0_kW', 'Eaux0_kW', 'E_ww0_kW', 'E_hs0_kW', 'E_cs0_kW',
-                                        'E_cre0_kW', 'E_cdata0_kW']].sum(axis=1)
+                                  'Epro0_kW', 'Eaux0_kW', 'E_ww0_kW', 'E_hs0_kW', 'E_cs0_kW',
+                                  'E_cre0_kW', 'E_cdata0_kW']].sum(axis=1)
 
     df_ann.to_csv(locator.get_total_demand('csv'), index=True, float_format='%.3f', na_rep=0)
     return print(' - Annual results rewritten!')
+
 
 def main(config):
     recalc_DH(config)
     rewrite_to_csv(config)
     return print(' - District heating dealt with!')
 
+
+def test(config):
+    locator = cea.inputlocator.InputLocator(config.scenario)
+    print(locator.get_demand_results_folder())
+    print(demand_source(locator, 'B001', 'Qww_sys_kWh'))
+
+
 if __name__ == '__main__':
+    t1 = time.perf_counter()
     main(cea.config.Configuration())
+    time_end = time.perf_counter() - t1
+    print(time_end)
