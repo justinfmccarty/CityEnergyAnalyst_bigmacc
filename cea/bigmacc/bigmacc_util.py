@@ -42,6 +42,7 @@ def change_key(key):
     s[6] = '0'
     return "".join(s)
 
+
 def create_rad_subs(config):
     all_keys = generate_key_list(config)
 
@@ -67,6 +68,7 @@ def check_rad_files_ready(config, key):
         return False
     else:
         return True
+
 
 def print_test(item):
     print(item)
