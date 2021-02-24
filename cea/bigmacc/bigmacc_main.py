@@ -20,7 +20,6 @@ import cea.datamanagement.archetypes_mapper
 import cea.datamanagement.data_initializer
 import cea.analysis.costs.system_costs
 import cea.analysis.lca.main
-import cea.bigmacc.sandbox
 import cea.bigmacc.bigmacc_util as util
 import cea.bigmacc.bigmacc_operations as bigmacc
 import cea.bigmacc.netcdf_writer as netcdf_writer
@@ -60,7 +59,7 @@ def main(config):
         print(config.bigmacc.key)
         try:
             t1 = time.perf_counter()
-            cea.bigmacc.sandbox.sandbox_run(config)
+            cea.bigmacc.bigmacc_operations.run_bigmacc(config)
             time_end = time.perf_counter() - t1
             print('Completed iteration in: %d.2 seconds' % time_end)
             # if config.bigmacc.rerun != True:

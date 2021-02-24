@@ -239,16 +239,10 @@ def write_PV(config):
             else:
                 print(' - No PV use detected.')
 
-    rewrite_pv_path = os.path.join(config.bigmacc.data,
-                                   config.general.parent,
-                                   'bigmacc-out',
-                                   config.bigmacc.round)
-    log_df = pd.DataFrame(pd.Series(done,name='completed'))
-    print(log_df)
-    log_df.to_csv(os.path.join(rewrite_pv_path, 'pv_rewrite_logger.csv'))
     duration = 2000  # milliseconds
     freq = 440  # Hz
     winsound.Beep(freq, duration)
+    return
 
 def write_test():
     path = r"C:\Users\justi\Desktop\Total_demand.csv"
@@ -256,9 +250,23 @@ def write_test():
     path2 = r"C:\Users\justi\Desktop\Total_demand_alt.csv"
     df.to_csv(path2, float_format='%.3f', na_rep=0)
 
+def move_files(config):
+    for key in generate_key_list(config):
+        config.bigmacc.key = key
+        dir1 = os.path.join(config.bigmacc.data, config.general.parent,
+                               'bigmacc_out', config.bigmacc.round,
+                               f"hourly_{config.general.parent}_{config.bigmacc.key}")
+        dir2 = os.path.join(config.bigmacc.data, config.general.parent,
+                                  'bigmacc_out', config.bigmacc.round, 'old',
+                                  f"hourly_{config.general.parent}_{config.bigmacc.key}")
+
+        if not os.path.exists(dir1):
+            shutil.move(dir2,dir1)
+            print(f'moved {key}')
+
 
 if __name__ == '__main__':
-    write_PV(cea.config.Configuration())
+    move_files(cea.config.Configuration())
 
 
 

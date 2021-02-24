@@ -29,7 +29,6 @@ def test_process(bldg, locator):
 
 def process_hourly(bldg, locator):
     # print(bldg)
-    demand_total = pd.read_csv(locator.get_total_demand(format='csv'),index_col='Name')
     pv_bldg = pd.read_csv(locator.PV_results(bldg))
     hourly_results = locator.get_demand_results_file(bldg, format='csv')
     df_demand = pd.read_csv(hourly_results)
