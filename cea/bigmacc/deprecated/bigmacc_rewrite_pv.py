@@ -80,8 +80,8 @@ def process_whole(config, key):
                                      'demand',
                                      f'{bldg}.csv')
         hourly_demand = pd.read_csv(hourly_demand_path)
-        demand_total.loc[bldg]['PV_MWhyr'] = hourly_demand['PV_kWh'].sum() / 1000
-        demand_total.loc[bldg]['GRID_MWhyr'] = hourly_demand['GRID_kWh'].sum() / 1000
+        demand_total.loc[bldg, 'PV_MWhyr'] = hourly_demand['PV_kWh'].sum() / 1000
+        demand_total.loc[bldg, 'GRID_MWhyr'] = hourly_demand['GRID_kWh'].sum() / 1000
     demand_total.to_csv(demand_total_path)
     return print(f'Multiprocessing of annual completed for {key}.')
 

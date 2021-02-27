@@ -115,7 +115,6 @@ def run(config):
         else:
             radfiles = config.bigmacc.copyrad
             # print(' - Copying radiation results from {}.'.format(radfiles))
-            # distutils.dir_util.copy_tree(radfiles, locator.get_solar_radiation_folder())
             print(' - Experiment {} does not require new radiation simulation.'.format(i))
 
         # running demand forecasting
@@ -130,25 +129,26 @@ def run(config):
             print(' - Running demand simulation for experiment {}.'.format(i))
             cea.demand.demand_main.main(config)
         else:
-            if keys[0] == 1:
-                print(' - Running demand simulation for experiment {}.'.format(i))
-                cea.demand.demand_main.main(config)
-            elif keys[6] == 1:
-                print(' - Running demand simulation for experiment {}.'.format(i))
-                cea.demand.demand_main.main(config)
-            else:
-                cea.demand.demand_main.main(config)
-                # print(' - Looking for demand results data from previous run for experiment {}.'.format(i))
-                # old_demand_files = os.path.join(config.bigmacc.data, config.general.parent, i,
-                #                                 config.general.scenario_name, 'outputs', 'data', 'demand')
-                # if os.path.exists(old_demand_files):
-                #     # print(' - Copy demand results files from previous run of experiment {}.'.format(i))
-                #     # distutils.dir_util.copy_tree(old_demand_files, locator.get_demand_results_folder())
-                #     pass
-                # else:
-                #     print(' - No results found.')
-                #     print(' - Running demand simulation for experiment {}.'.format(i))
-                #     cea.demand.demand_main.main(config)
+            # if keys[0] == 1:
+            #     print(' - Running demand simulation for experiment {}.'.format(i))
+            #     cea.demand.demand_main.main(config)
+            # elif keys[6] == 1:
+            #     print(' - Running demand simulation for experiment {}.'.format(i))
+            #     cea.demand.demand_main.main(config)
+            # else:
+            print(' - Running demand simulation for experiment {}.'.format(i))
+            cea.demand.demand_main.main(config)
+            # print(' - Looking for demand results data from previous run for experiment {}.'.format(i))
+            # old_demand_files = os.path.join(config.bigmacc.data, config.general.parent, i,
+            #                                 config.general.scenario_name, 'outputs', 'data', 'demand')
+            # if os.path.exists(old_demand_files):
+            #     # print(' - Copy demand results files from previous run of experiment {}.'.format(i))
+            #     # distutils.dir_util.copy_tree(old_demand_files, locator.get_demand_results_folder())
+            #     pass
+            # else:
+            #     print(' - No results found.')
+            #     print(' - Running demand simulation for experiment {}.'.format(i))
+            #     cea.demand.demand_main.main(config)
 
         if config.bigmacc.pv == True:
             print(' - Run PV is {}.'.format(config.bigmacc.pv))
@@ -157,9 +157,7 @@ def run(config):
                 old_pv_files = os.path.join(config.bigmacc.data, config.general.parent, i,
                                             config.general.scenario_name, 'outputs', 'data', 'potentials', 'solar')
                 if os.path.exists(old_pv_files):
-                    # print(' - Copying PV files from previous run of experiment {}.'.format(i))
-                    # distutils.dir_util.copy_tree(old_pv_files, locator.solar_potential_folder())
-                    pass
+                    print(' - PV files exist experiment {}.'.format(i))
                 else:
                     print(' - PV files do not exist for previous run of experiment {} at {}.'.format(i, old_pv_files))
                     print(' - Running PV simulation for experiment {}.'.format(i))
@@ -180,7 +178,7 @@ def run(config):
             print(' - Do not run district heat recalculation.')
         else:
             print(' - Run district heat recalculation.')
-            cea.bigmacc.wesbrook_DH.main(config)
+            cea.bigmacc.wesbrook_DH_multi.main(config)
 
         if keys[7] == 1:
             print(' - PV use detected. Adding PV generation to demand files.')
@@ -507,18 +505,22 @@ def run_bigmacc(config):
             print(' - Do not run district heat recalculation.')
         else:
             print(' - Run district heat recalculation.')
-            if len(config.demand.buildings) > 50:
-                cea.bigmacc.wesbrook_DH_multi.main(config)
-            else:
-                cea.bigmacc.wesbrook_DH_single.main(config)
+            cea.bigmacc.wesbrook_DH_multi.main(config)
+            # if len(config.demand.buildings) > 50:
+            #     cea.bigmacc.wesbrook_DH_multi.main(config)
+            # else:
+            #     cea.bigmacc.wesbrook_DH_single.main(config)
 
 
         # include PV results in demand results files for costing and emissions
         if keys[7] == 1:
             print(' - PV use detected. Adding PV generation to demand files.')
-            util.write_pv_to_demand(config)
+            util.write_pv_to_demand_multi(config)
         else:
             print(' - No PV use detected.')
+
+        print(f' - Writing annual results for {i}.')
+        util.rewrite_annual_demand(config)
 
         # running the emissions and costing calculations
         print(' - Run cost and emissions scripts.')
@@ -559,18 +561,6 @@ def run_bigmacc(config):
             # distutils.dir_util.copy_tree(locator.solar_potential_folder(), new_outputs_path_solar_potential)
             # distutils.dir_util.copy_tree(locator.get_water_body_potential(), new_outputs_path_water)
 
-
-        # old_water_files = os.path.join(config.bigmacc.data, config.general.parent, i,
-        #                                config.general.scenario_name, 'outputs', 'data', 'potentials',
-        #                                'Water_body_potential.csv')
-        # if keys[6] != 1:
-        #     if os.path.exists(old_water_files):
-        #         os.remove(old_water_files)
-        #
-        # if keys[7] != 1:
-        #     if os.path.exists(old_pv_files):
-        #         shutil.rmtree(old_pv_files)
-
         time_elapsed = time.perf_counter() - t0
 
         # save log information
@@ -578,13 +568,13 @@ def run_bigmacc(config):
                              index_col='Unnamed: 0')
         log_df = log_df.append(pd.DataFrame({'Experiments': 'exp_{}'.format(i),
                                              'Completed': 'True',
-                                             'Experiment Time': '%d.2 seconds' % time_elapsed,
+                                             'Experiment Time': time_elapsed,
                                              'Unique Radiation': config.bigmacc.runrad}, index=[0]), ignore_index=True)
         log_df.to_csv(os.path.join(bigmacc_outputs_path, 'logger.csv'))
         log_df.to_csv(r"C:\Users\justi\Desktop\126logger_backup.csv", )
 
         # write netcdf of hourly_results
-        netcdf_writer.main(config, time='hourly')
+        netcdf_writer.main(config, time_scale='hourly')
 
         print(' - Purge results before next run (costs, demand, emissions.')
         shutil.rmtree(locator.get_costs_folder())

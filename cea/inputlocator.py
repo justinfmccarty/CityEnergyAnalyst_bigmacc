@@ -10,6 +10,7 @@ import cea.schemas
 import shutil
 import tempfile
 import time
+import cea.config
 
 __author__ = "Daren Thomas"
 __copyright__ = "Copyright 2017, Architecture and Building Systems - ETH Zurich"
@@ -1034,6 +1035,11 @@ class InputLocator(object):
     def get_alt_use_type_properties(self):
         return os.path.join(self.get_project_temp_folder(),'USE_TYPE_PROPERTIES.xlsx')
 
+    def get_hourly_demand_columns(self,data):
+        return os.path.join(data,'constants','hourly_demand_cols.csv')
+
+    def get_annual_demand_columns(self,data):
+        return os.path.join(data,'constants','annual_demand_cols.csv')
 
 def check_cpg(shapefile_path):
     # ensures that the CPG file is the correct one

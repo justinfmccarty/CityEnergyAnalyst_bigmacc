@@ -10,6 +10,7 @@ import os
 import winsound
 import xlsxwriter
 import cea.bigmacc.netcdf_writer as netcdf_writer
+from cea.demand import demand_writers
 
 import itertools
 import numpy as np
@@ -264,9 +265,13 @@ def move_files(config):
             shutil.move(dir2,dir1)
             print(f'moved {key}')
 
+def get_columns(config):
+    a = util.get_columns(config,type='hourly_demand')
+    return print(a)
+
 
 if __name__ == '__main__':
-    move_files(cea.config.Configuration())
+    get_columns(cea.config.Configuration())
 
 
 

@@ -9,17 +9,19 @@ import logging
 
 logging.getLogger('numba').setLevel(logging.WARNING)
 import shutil
+import cea.utilities.parallel
 import cea.config
 import cea.utilities
 import cea.inputlocator
 import cea.demand.demand_main
 import cea.resources.radiation_daysim.radiation_main
 import cea.bigmacc.bigmacc_rules
-import cea.bigmacc.wesbrook_DH
 import cea.datamanagement.archetypes_mapper
 import cea.datamanagement.data_initializer
 import cea.analysis.costs.system_costs
 import cea.analysis.lca.main
+from itertools import repeat
+
 import cea.demand.schedule_maker.schedule_maker as schedule_maker
 import cea.bigmacc.bigmacc_util as util
 import distutils
@@ -38,232 +40,135 @@ __email__ = ""
 __status__ = ""
 
 
-def sandbox_run(config):
-    """
-    This is the main script for the bigmacc process. It iteartes through various CEA and bigmacc operations for each
-    key (i.e. 01011101). It ends by saving a sample of the hourly results across the key for each building in a netcdf
-    and then wiping the project files to reset them for the next iteration.
 
-    :param config:
-    :type config: cea.config.Configuration
-    :return:
+
+
+def rewrite_to_csv(bldg,locator):
     """
+    Used to rewrite the annual results per building after calculating
+    the district heating supply.
+    """
+
+    df_ann = pd.read_csv(locator.get_total_demand('csv'), index_col='Name')
+
+    # print(' - Rewriting annual results following recalculation.')
+
+    hourly_results = locator.get_demand_results_file(bldg, 'csv')
+    df_hourly = pd.read_csv(hourly_results, index_col='DATE')
+    df_ann.at[bldg, 'GRID_MWhyr'] = df_hourly['GRID_kWh'].sum() / 1000
+    df_ann.at[bldg, 'E_sys_MWhyr'] = 0
+    df_ann.at[bldg, 'PV_MWhyr'] = df_hourly['PV_kWh'].sum() / 1000
+    df_ann.at[bldg, 'NG_hs_MWhyr'] = 5
+    df_ann.at[bldg, 'NG_ww_MWhyr'] = df_hourly['NG_ww_kWh'].sum() / 1000
+    df_ann.at[bldg, 'GRID_hs_MWhyr'] = df_hourly['GRID_hs_kWh'].sum() / 1000
+    df_ann.at[bldg, 'GRID_ww_MWhyr'] = df_hourly['GRID_ww_kWh'].sum() / 1000
+    df_ann.at[bldg, 'E_hs_MWhyr'] = df_hourly['E_hs_kWh'].sum() / 1000
+    df_ann.at[bldg, 'E_ww_MWhyr'] = df_hourly['E_ww_kWh'].sum() / 1000
+
+    df_ann.at[bldg, 'DH_hs_MWhyr'] = 0
+    df_ann.at[bldg, 'DH_ww_MWhyr'] = 0
+    df_ann.at[bldg, 'DH_hs0_kW'] = 0
+    df_ann.at[bldg, 'DH_ww0_kW'] = 0
+
+    df_ann.at[bldg, 'GRID_hs0_kW'] = df_hourly['GRID_hs_kWh'].max()
+    df_ann.at[bldg, 'E_hs0_kW'] = df_hourly['E_hs_kWh'].max()
+    df_ann.at[bldg, 'NG_hs0_kW'] = df_hourly['NG_hs_kWh'].max()
+    df_ann.at[bldg, 'GRID_ww0_kW'] = df_hourly['GRID_ww_kWh'].max()
+    df_ann.at[bldg, 'E_ww0_kW'] = df_hourly['E_ww_kWh'].max()
+    df_ann.at[bldg, 'NG_ww0_kW'] = df_hourly['NG_ww_kWh'].max()
+
+    # df_ann['GRID0_kW'] = df_ann[['GRID_a0_kW', 'GRID_l0_kW', 'GRID_v0_kW', 'GRID_ve0_kW', 'GRID_data0_kW',
+    #                                    'GRID_pro0_kW', 'GRID_aux0_kW', 'GRID_ww0_kW', 'GRID_hs0_kW',
+    #                                    'GRID_cs0_kW', 'GRID_cdata0_kW', 'GRID_cre0_kW']].sum(axis=1)
+    #
+    # df_ann['E_sys0_kW'] = df_ann[['Eal0_kW', 'Ea0_kW', 'El0_kW', 'Ev0_kW', 'Eve0_kW', 'Edata0_kW',
+    #                                     'Epro0_kW', 'Eaux0_kW', 'E_ww0_kW', 'E_hs0_kW', 'E_cs0_kW',
+    #                                     'E_cre0_kW', 'E_cdata0_kW']].sum(axis=1)
+
+    # df_ann.to_csv(locator.get_total_demand('csv'), index=True, float_format='%.3f', na_rep=0)
+    return df_ann.loc[bldg]
+
+def run_parallel(config):
+
     locator = cea.inputlocator.InputLocator(config.scenario)
+    n = len(config.demand.buildings)
 
-    # set the key (i.e. 01010100)
-    print('Key in run')
-    i = config.bigmacc.key
-    print(i)
+    df = pd.read_csv(locator.get_total_demand('csv'), index_col='Name')
 
-    # SCENARIO SETUP ---
-    cea.datamanagement.data_initializer.main(config)
+    print(df['NG_hs_MWhyr'])
+    calc_hourly = cea.utilities.parallel.vectorize(rewrite_to_csv, config.get_number_of_processes())
 
-    # use the scenario code to set the year for the lca and other operations that need the current year
-    pathway_code = config.general.parent
-    pathway_items = pathway_code.split('_')
-    scenario_year = int(pathway_items[1])
-    config.emissions.year_to_calculate = scenario_year
-
-    bigmacc_outputs_path = os.path.join(config.bigmacc.data, config.general.parent, 'bigmacc_out', config.bigmacc.round)
-
-    scen_check = pd.read_csv(os.path.join(bigmacc_outputs_path, 'logger.csv'), index_col='Unnamed: 0')
-    experiment_key = 'exp_{}'.format(i)
-    print(experiment_key)
-    keys = [int(x) for x in str(i)]
-    if experiment_key in scen_check['Experiments'].values.tolist():
-        print('Experiment was finished previously, moving to next.')
-        pass
-    else:
-        print('START: experiment {}.'.format(i))
-
-        # INITIALIZE TIMER ---
-        t0 = time.perf_counter()
-        if os.path.exists(os.path.join(config.bigmacc.data, config.general.parent, i)):
-            print(' - Folder exists for experiment {}.'.format(i))
-        else:
-            os.mkdir(os.path.join(config.bigmacc.data, config.general.parent, i))
-            print(' - Folder does not exist for experiment {}, creating now.'.format(i))
-
-        # run the archetype mapper to leverage the newly loaded typology file and set parameters
-        print(' - Running archetype mapper for experiment {} to remove changes made in the last experiment.'.format(i))
-        cea.datamanagement.archetypes_mapper.main(config)
-
-        # run the rule checker to set the scenario parameters
-        print(' - Running rule checker for experiment {}.'.format(i))
-        cea.bigmacc.bigmacc_rules.main(config)
-
-        # SIMULATIONS ---
-        print(' - Run radiation is {}.'.format(config.bigmacc.runrad))
-        print(' - Write sensor data is {}.'.format(config.radiation.write_sensor_data))
-
-        old_rad_files = os.path.join(config.bigmacc.data, config.general.parent, i,
-                                     config.general.scenario_name, 'outputs', 'data', 'solar-radiation')
-        # checking on need for radiation simulation
-        if i in config.bigmacc.runradiation:
-            shutil.rmtree(locator.get_solar_radiation_folder())
-            if config.bigmacc.rerun == True:
-                print(' - Rerun mode, copying radiation files for experiment {}.'.format(i))
-                distutils.dir_util.copy_tree(old_rad_files, locator.get_solar_radiation_folder())
-            else:
-                print(' - Radiation running for experiment {}.'.format(i))
-                cea.resources.radiation_daysim.radiation_main.main(config)
-        else:
-            print(' - Previous iteration radiation files are equivalent for experiment {}.'.format(i))
-
-        if not os.path.exists(locator.get_solar_radiation_folder()):
-            print(' - Radiation files for experiment {} not found, running radiation script.'.format(i))
-            cea.resources.radiation_daysim.radiation_main.main(config)
-
-        # check to see if schedules need to be made
-        bldg_names = locator.get_zone_building_names()
-        for name in bldg_names:
-            if not os.path.exists(locator.get_schedule_model_file(name)):
-                print(' - Schedule maker running for building {}.'.format(name))
-                schedule_maker.schedule_maker_main(locator, config)
-            else:
-                print(' - Schedules exist for building {}.'.format(name))
-        print(' - Schedules exist for experiment {}.'.format(i))
-
-        # check to see if we need to rerun demand or if we can copy
-        if config.bigmacc.rerun != True:
-            print(' - Running demand simulation for experiment {}.'.format(i))
-            cea.demand.demand_main.main(config)
-        else:
-            # TODO paramterize this list
-            if keys[0] == 1:
-                print(' - Running demand simulation for experiment {}.'.format(i))
-                cea.demand.demand_main.main(config)
-            elif keys[6] == 1:
-                print(' - Running demand simulation for experiment {}.'.format(i))
-                cea.demand.demand_main.main(config)
-            else:
-                print(' - Copying demand results for experiment {}.'.format(i))
-                old_demand_files = os.path.join(config.bigmacc.data, config.general.parent, i,
-                                                config.general.scenario_name, 'outputs', 'data', 'demand')
-                distutils.dir_util.copy_tree(old_demand_files, locator.get_demand_results_folder())
-
-        # if not os.path.exists(locator.get_demand_results_folder()):
-        #     print(' - Demand results for experiment {} not found, running radiation script.'.format(i))
-        #     cea.demand.demand_main.main(config)
-
-        old_pv_files = os.path.join(config.bigmacc.data, config.general.parent, i,
-                                    config.general.scenario_name, 'outputs', 'data', 'potentials', 'solar')
-        if config.bigmacc.pv == True:
-            if i in config.bigmacc.runradiation:
-                shutil.rmtree(locator.solar_potential_folder())
-                if config.bigmacc.rerun == True:
-                    print(' - Rerun mode, copying PV files for experiment {}.'.format(i))
-                    distutils.dir_util.copy_tree(old_pv_files, locator.solar_potential_folder())
-                else:
-                    print(' - Radiation running for experiment {}.'.format(i))
-                    photovoltaic.main(config)
-            else:
-                print(' - Previous iteration PV results files are equivalent for experiment {}.'.format(i))
-
-            # last check for the PV files
-            if not os.path.exists(locator.solar_potential_folder()):
-                print(' - PV results do not exist running simulation for experiment {}.'.format(i))
-                photovoltaic.main(config)
-        else:
-            print(f' - PV does not exist in scenario {i}.')
-
-        print('Run water-body exchange is {}.'.format(config.bigmacc.water))
-        # if water-body simulation is needed, run it.
-        if config.bigmacc.water == True:
-            print(' - Running water body simulation for experiment {}.'.format(i))
-            water.main(config)
-        else:
-            print(f' - Seawater loop does not exist in scenario {i}.')
-
-        # recalculating the supply split between grid and ng in the websrook DH
-        if keys[4] == 1:
-            print(' - Do not run district heat recalculation.')
-        else:
-            print(' - Run district heat recalculation.')
-            cea.bigmacc.wesbrook_DH.main(config)
-
-        # include PV results in demand results files for costing and emissions
-        if keys[7] == 1:
-            print(' - PV use detected. Adding PV generation to demand files.')
-            util.write_pv_to_demand(config)
-        else:
-            print(' - No PV use detected.')
-
-        # running the emissions and costing calculations
-        print(' - Run cost and emissions scripts.')
-        cea.analysis.costs.system_costs.main(config)
-        cea.analysis.lca.main.main(config)
-
-        # clone out the simulation inputs and outputs directory
-        print(' - Transferring results directory for experiment {}.'.format(i))
-
-        new_inputs_path = os.path.join(config.bigmacc.data, config.general.parent, i,
-                                       config.general.scenario_name, 'inputs')
-        new_outputs_path = os.path.join(config.bigmacc.data, config.general.parent, i,
-                                        config.general.scenario_name, 'outputs', 'data')
-        new_outputs_path_costs = os.path.join(config.bigmacc.data, config.general.parent, i,
-                                        config.general.scenario_name, 'outputs', 'data','costs')
-        new_outputs_path_emissions = os.path.join(config.bigmacc.data, config.general.parent, i,
-                                        config.general.scenario_name, 'outputs', 'data','emissions')
-        new_outputs_path_demand = os.path.join(config.bigmacc.data, config.general.parent, i,
-                                        config.general.scenario_name, 'outputs', 'data','demand')
-        new_outputs_path_occupancy = os.path.join(config.bigmacc.data, config.general.parent, i,
-                                        config.general.scenario_name, 'outputs', 'data','occupancy')
-        new_outputs_path_solar_radiation = os.path.join(config.bigmacc.data, config.general.parent, i,
-                                        config.general.scenario_name, 'outputs', 'data','solar-radiation')
-        new_outputs_path_solar_potential = os.path.join(config.bigmacc.data, config.general.parent, i,
-                                        config.general.scenario_name, 'outputs', 'data','potentials','solar')
-        new_outputs_path_water = os.path.join(config.bigmacc.data, config.general.parent, i,
-                                        config.general.scenario_name, 'outputs', 'data','potentials','Water_body_potential.csv')
-
-        if config.bigmacc.rerun != True:
-            distutils.dir_util.copy_tree(locator.get_data_results_folder(), new_outputs_path)
-            distutils.dir_util.copy_tree(locator.get_input_folder(), new_inputs_path)
-        else:
-            distutils.dir_util.copy_tree(locator.get_costs_folder(), new_outputs_path_costs)
-            distutils.dir_util.copy_tree(locator.get_lca_emissions_results_folder(), new_outputs_path_emissions)
-            distutils.dir_util.copy_tree(locator.get_demand_results_folder(), new_outputs_path_demand)
-            # distutils.dir_util.copy_tree(locator.get_schedule_model_folder(), new_outputs_path_occupancy)
-            # distutils.dir_util.copy_tree(locator.get_solar_radiation_folder(), new_outputs_path_solar_radiation)
-            # distutils.dir_util.copy_tree(locator.solar_potential_folder(), new_outputs_path_solar_potential)
-            # distutils.dir_util.copy_tree(locator.get_water_body_potential(), new_outputs_path_water)
+    res = calc_hourly(
+        config.demand.buildings,
+        repeat(locator, n))
 
 
-        # old_water_files = os.path.join(config.bigmacc.data, config.general.parent, i,
-        #                                config.general.scenario_name, 'outputs', 'data', 'potentials',
-        #                                'Water_body_potential.csv')
-        # if keys[6] != 1:
-        #     if os.path.exists(old_water_files):
-        #         os.remove(old_water_files)
-        #
-        # if keys[7] != 1:
-        #     if os.path.exists(old_pv_files):
-        #         shutil.rmtree(old_pv_files)
+    return print(pd.concat(res,axis=1).transpose()['NG_hs_MWhyr'])
 
-        time_elapsed = time.perf_counter() - t0
 
-        # save log information
-        log_df = pd.read_csv(os.path.join(bigmacc_outputs_path, 'logger.csv'),
-                             index_col='Unnamed: 0')
-        log_df = log_df.append(pd.DataFrame({'Experiments': 'exp_{}'.format(i),
-                                             'Completed': 'True',
-                                             'Experiment Time': '%d.2 seconds' % time_elapsed,
-                                             'Unique Radiation': config.bigmacc.runrad}, index=[0]), ignore_index=True)
-        log_df.to_csv(os.path.join(bigmacc_outputs_path, 'logger.csv'))
-        log_df.to_csv(r"C:\Users\justi\Desktop\126logger_backup.csv", )
+def calc_annual(bldg,locator):
+    """
+    Used to rewrite the annual results per building after calculating
+    the district heating supply.
+    """
 
-        # write netcdf of hourly_results
-        netcdf_writer.main(config, time='hourly')
+    df_ann = pd.read_csv(locator.get_total_demand('csv'), index_col='Name')
 
-        print(' - Purge results before next run (costs, demand, emissions.')
-        shutil.rmtree(locator.get_costs_folder())
-        shutil.rmtree(locator.get_demand_results_folder())
-        shutil.rmtree(locator.get_lca_emissions_results_folder())
+    # print(' - Rewriting annual results following recalculation.')
 
-        # when the setpoint is changed it is in a deeper database than the archetypes mapper can reach so reset it here
-        if keys[0] == 1:
-            print(' - Rerun data initializer.')
-            cea.datamanagement.data_initializer.main(config)
-        else:
-            pass
-        print('END: experiment {}. \n'.format(i))
+    hourly_results = locator.get_demand_results_file(bldg, 'csv')
+    df_hourly = pd.read_csv(hourly_results, index_col='DATE')
+    df_ann.at[bldg, 'GRID_MWhyr'] = df_hourly['GRID_kWh'].sum() / 1000
+    df_ann.at[bldg, 'E_sys_MWhyr'] = 0
+    df_ann.at[bldg, 'PV_MWhyr'] = df_hourly['PV_kWh'].sum() / 1000
+    df_ann.at[bldg,'NG_hs_MWhyr'] = df_hourly['NG_hs_kWh'].sum() / 1000
+    df_ann.at[bldg, 'NG_ww_MWhyr'] = df_hourly['NG_ww_kWh'].sum() / 1000
+    df_ann.at[bldg, 'GRID_hs_MWhyr'] = df_hourly['GRID_hs_kWh'].sum() / 1000
+    df_ann.at[bldg, 'GRID_ww_MWhyr'] = df_hourly['GRID_ww_kWh'].sum() / 1000
+    df_ann.at[bldg, 'E_hs_MWhyr'] = df_hourly['E_hs_kWh'].sum() / 1000
+    df_ann.at[bldg, 'E_ww_MWhyr'] = df_hourly['E_ww_kWh'].sum() / 1000
+
+    df_ann.at[bldg, 'DH_hs_MWhyr'] = 0
+    df_ann.at[bldg, 'DH_ww_MWhyr'] = 0
+    df_ann.at[bldg, 'DH_hs0_kW'] = 0
+    df_ann.at[bldg, 'DH_ww0_kW'] = 0
+
+    df_ann.at[bldg, 'GRID_hs0_kW'] = df_hourly['GRID_hs_kWh'].max()
+    df_ann.at[bldg, 'E_hs0_kW'] = df_hourly['E_hs_kWh'].max()
+    df_ann.at[bldg, 'NG_hs0_kW'] = df_hourly['NG_hs_kWh'].max()
+    df_ann.at[bldg, 'GRID_ww0_kW'] = df_hourly['GRID_ww_kWh'].max()
+    df_ann.at[bldg, 'E_ww0_kW'] = df_hourly['E_ww_kWh'].max()
+    df_ann.at[bldg, 'NG_ww0_kW'] = df_hourly['NG_ww_kWh'].max()
+
+    # df_ann['GRID0_kW'] = df_ann[['GRID_a0_kW', 'GRID_l0_kW', 'GRID_v0_kW', 'GRID_ve0_kW', 'GRID_data0_kW',
+    #                                    'GRID_pro0_kW', 'GRID_aux0_kW', 'GRID_ww0_kW', 'GRID_hs0_kW',
+    #                                    'GRID_cs0_kW', 'GRID_cdata0_kW', 'GRID_cre0_kW']].sum(axis=1)
+    #
+    # df_ann['E_sys0_kW'] = df_ann[['Eal0_kW', 'Ea0_kW', 'El0_kW', 'Ev0_kW', 'Eve0_kW', 'Edata0_kW',
+    #                                     'Epro0_kW', 'Eaux0_kW', 'E_ww0_kW', 'E_hs0_kW', 'E_cs0_kW',
+    #                                     'E_cre0_kW', 'E_cdata0_kW']].sum(axis=1)
+
+    # df_ann.to_csv(locator.get_total_demand('csv'), index=True, float_format='%.3f', na_rep=0)
+    return df_ann.loc[bldg]
+
+def run(config):
+    locator = cea.inputlocator.InputLocator(config.scenario)
+    bldg_list = config.demand.buildings
+    results = dict()
+
+    for i in bldg_list:
+        results[i] = calc_annual(i, locator)
+
+    # hourly_results = locator.get_demand_results_file('B000', 'csv')
+    # print(hourly_results)
+    # df_hourly = pd.read_csv(hourly_results, index_col='DATE')
+    # return df_hourly
+    return pd.DataFrame.from_dict(results)
+
+
+
+if __name__ == '__main__':
+   t1 = time.perf_counter()
+   res = run_parallel(cea.config.Configuration())
+   time_end = time.perf_counter() - t1
+   print(time_end)

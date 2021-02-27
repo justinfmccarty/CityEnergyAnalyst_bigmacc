@@ -98,6 +98,17 @@ class DemandWriter(object):
         hourly_data = pd.DataFrame(data).set_index('DATE')
         return columns, hourly_data
 
+    def hourly_columns(self):
+        # get order of columns
+        columns = ['Name', 'people', 'x_int']
+        columns.extend([x + '_kWh' for x in self.load_vars])
+        columns.extend([x + '_kWh' for x in self.load_plotting_vars])
+        columns.extend([x + '_kWperC' for x in self.mass_flow_vars])
+        columns.extend([x + '_C' for x in self.temperature_vars])
+        # add other default elements
+
+        return columns
+
 
 class HourlyDemandWriter(DemandWriter):
     """Write out the hourly demand results"""

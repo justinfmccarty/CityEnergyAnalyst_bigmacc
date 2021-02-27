@@ -123,6 +123,7 @@ def calc_district_demand(df):
 
 
 def recalc_DH(config):
+    # TODO By splitting up DHW and HS the overall demand on the system is minimized
     # TODO rewrite so the district heat and district hot water can run independentely
     locator = cea.inputlocator.InputLocator(config.scenario)
     on_DH_hs, on_DH_dhw = district_buildings(locator)
@@ -186,7 +187,7 @@ def recalc_DH(config):
             df_demand['DH_hs_kWh'] = 0
 
             df_demand['GRID_ww_kWh'] = hp_dhw.loc[bldg]
-            df_demand['E_ww_kWh'] = ng_heat.loc[bldg]
+            df_demand['E_ww_kWh'] = hp_heat.loc[bldg]
             df_demand['NG_ww_kWh'] = ng_dhw.loc[bldg]
             df_demand['DH_ww_kWh'] = 0
 
@@ -249,28 +250,27 @@ def rewrite_to_csv(config):
     for bldg in df_ann.index.to_list():
         hourly_results = locator.get_demand_results_file(bldg, 'csv')
         df_hourly = pd.read_csv(hourly_results, index_col='DATE')
-        df_ann.loc[bldg]['GRID_MWhyr'] = df_hourly['GRID_kWh'].sum() / 1000
-        df_ann.loc[bldg]['GRID_MWhyr'] = df_hourly['GRID_kWh'].sum() / 1000
-        df_ann.loc[bldg]['E_sys_MWhyr'] = df_hourly['E_sys_kWh'].sum() / 1000
-        df_ann.loc[bldg]['PV_MWhyr'] = df_hourly['PV_kWh'].sum() / 1000
-        df_ann.loc[bldg]['NG_hs_MWhyr'] = df_hourly['NG_hs_kWh'].sum() / 1000
-        df_ann.loc[bldg]['NG_ww_MWhyr'] = df_hourly['NG_ww_kWh'].sum() / 1000
-        df_ann.loc[bldg]['GRID_hs_MWhyr'] = df_hourly['GRID_hs_kWh'].sum() / 1000
-        df_ann.loc[bldg]['GRID_ww_MWhyr'] = df_hourly['GRID_ww_kWh'].sum() / 1000
-        df_ann.loc[bldg]['E_hs_MWhyr'] = df_hourly['E_hs_kWh'].sum() / 1000
-        df_ann.loc[bldg]['E_ww_MWhyr'] = df_hourly['E_ww_kWh'].sum() / 1000
+        df_ann.loc[bldg,'GRID_MWhyr'] = df_hourly['GRID_kWh'].sum() / 1000
+        df_ann.loc[bldg,'E_sys_MWhyr'] = df_hourly['E_sys_kWh'].sum() / 1000
+        df_ann.loc[bldg,'PV_MWhyr'] = df_hourly['PV_kWh'].sum() / 1000
+        df_ann.loc[bldg,'NG_hs_MWhyr'] = df_hourly['NG_hs_kWh'].sum() / 1000
+        df_ann.loc[bldg,'NG_ww_MWhyr'] = df_hourly['NG_ww_kWh'].sum() / 1000
+        df_ann.loc[bldg,'GRID_hs_MWhyr'] = df_hourly['GRID_hs_kWh'].sum() / 1000
+        df_ann.loc[bldg,'GRID_ww_MWhyr'] = df_hourly['GRID_ww_kWh'].sum() / 1000
+        df_ann.loc[bldg,'E_hs_MWhyr'] = df_hourly['E_hs_kWh'].sum() / 1000
+        df_ann.loc[bldg,'E_ww_MWhyr'] = df_hourly['E_ww_kWh'].sum() / 1000
 
-        df_ann.loc[bldg]['DH_hs_MWhyr'] = 0
-        df_ann.loc[bldg]['DH_ww_MWhyr'] = 0
-        df_ann.loc[bldg]['DH_hs0_kW'] = 0
-        df_ann.loc[bldg]['DH_ww0_kW'] = 0
+        df_ann.loc[bldg,'DH_hs_MWhyr'] = 0
+        df_ann.loc[bldg,'DH_ww_MWhyr'] = 0
+        df_ann.loc[bldg,'DH_hs0_kW'] = 0
+        df_ann.loc[bldg,'DH_ww0_kW'] = 0
 
-        df_ann.loc[bldg]['GRID_hs0_kW'] = df_hourly['GRID_hs_kWh'].max()
-        df_ann.loc[bldg]['E_hs0_kW'] = df_hourly['E_hs_kWh'].max()
-        df_ann.loc[bldg]['NG_hs0_kW'] = df_hourly['NG_hs_kWh'].max()
-        df_ann.loc[bldg]['GRID_ww0_kW'] = df_hourly['GRID_ww_kWh'].max()
-        df_ann.loc[bldg]['E_ww0_kW'] = df_hourly['E_ww_kWh'].max()
-        df_ann.loc[bldg]['NG_ww0_kW'] = df_hourly['NG_ww_kWh'].max()
+        df_ann.loc[bldg,'GRID_hs0_kW'] = df_hourly['GRID_hs_kWh'].max()
+        df_ann.loc[bldg,'E_hs0_kW'] = df_hourly['E_hs_kWh'].max()
+        df_ann.loc[bldg,'NG_hs0_kW'] = df_hourly['NG_hs_kWh'].max()
+        df_ann.loc[bldg,'GRID_ww0_kW'] = df_hourly['GRID_ww_kWh'].max()
+        df_ann.loc[bldg,'E_ww0_kW'] = df_hourly['E_ww_kWh'].max()
+        df_ann.loc[bldg,'NG_ww0_kW'] = df_hourly['NG_ww_kWh'].max()
 
     df_ann['GRID0_kW'] = df_ann[['GRID_a0_kW', 'GRID_l0_kW', 'GRID_v0_kW', 'GRID_ve0_kW', 'GRID_data0_kW',
                                        'GRID_pro0_kW', 'GRID_aux0_kW', 'GRID_ww0_kW', 'GRID_hs0_kW',

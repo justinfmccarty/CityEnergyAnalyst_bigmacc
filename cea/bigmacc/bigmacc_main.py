@@ -15,7 +15,8 @@ import cea.inputlocator
 import cea.demand.demand_main
 import cea.resources.radiation_daysim.radiation_main
 import cea.bigmacc.bigmacc_rules
-import cea.bigmacc.wesbrook_DH
+import cea.bigmacc.wesbrook_DH_multi
+import cea.bigmacc.wesbrook_DH_single
 import cea.datamanagement.archetypes_mapper
 import cea.datamanagement.data_initializer
 import cea.analysis.costs.system_costs
@@ -62,10 +63,6 @@ def main(config):
             cea.bigmacc.bigmacc_operations.run_bigmacc(config)
             time_end = time.perf_counter() - t1
             print('Completed iteration in: %d.2 seconds' % time_end)
-            # if config.bigmacc.rerun != True:
-            #     bigmacc.run(config)
-            # else:
-            #     bigmacc.rerun(config)
         except:
             print(f'THERE WAS AN ERROR IN {key}.')
             error_path = os.path.join(bigmacc_outputs_path, 'error_logger.csv')
@@ -82,10 +79,9 @@ def main(config):
     duration = 1000  # milliseconds
     freq = 440  # Hz
     winsound.Beep(freq, duration)
-    print('Writing the whole scenario netcdf.')
-    netcdf_writer.main(config, time='whole')
+    print('Writing the whole scenario to zarr.')
+    netcdf_writer.main(config, time_scale='whole')
     winsound.Beep(freq, duration)
-
 
     print('Simulations completed. Move to next scenario.')
 
