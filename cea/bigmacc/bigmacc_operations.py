@@ -124,24 +124,23 @@ def run_bigmacc(config):
         print(' - Schedules exist for experiment {}.'.format(i))
 
         # SIMULATION 3 run demand
-        cea.demand.demand_main.main(config)
+        # cea.demand.demand_main.main(config)
 
-        # if config.bigmacc.rerun != True:
-        #     print(' - Running demand simulation for experiment {}.'.format(i))
-        #     cea.demand.demand_main.main(config)
-        # else:
-        #     if keys[0] == 1:
-        #         print(' - Running demand simulation for experiment {}.'.format(i))
-        #         cea.demand.demand_main.main(config)
-        #     elif keys[6] == 1:
-        #         print(' - Running demand simulation for experiment {}.'.format(i))
-        #         cea.demand.demand_main.main(config)
-        #     else:
-        #         cea.demand.demand_main.main(config)
-        #         # print(' - Copying demand results for experiment {}.'.format(i))
-        #         # old_demand_files = os.path.join(config.bigmacc.data, config.general.parent, 'bigmacc_in',
-        #         #                                 config.bigmacc.key, 'demand')
-        #         # distutils.dir_util.copy_tree(old_demand_files, locator.get_demand_results_folder())
+        if config.bigmacc.rerun != True:
+            print(' - Running demand simulation for experiment {}.'.format(i))
+            cea.demand.demand_main.main(config)
+        else:
+            if keys[0] == 1:
+                print(' - Running demand simulation for experiment {}.'.format(i))
+                cea.demand.demand_main.main(config)
+            elif keys[6] == 1:
+                print(' - Running demand simulation for experiment {}.'.format(i))
+                cea.demand.demand_main.main(config)
+            else:
+                print(' - Copying demand results for experiment {}.'.format(i))
+                old_demand_files = os.path.join(r'D:\BIGMACC_WESBROOK\Projects', config.general.parent,
+                                                config.bigmacc.key,'initial','outputs','data','demand')
+                distutils.dir_util.copy_tree(old_demand_files, locator.get_demand_results_folder())
 
         if not os.path.exists(locator.get_demand_results_folder()):
             print(' - Demand results for experiment {} not found, running radiation script.'.format(i))
