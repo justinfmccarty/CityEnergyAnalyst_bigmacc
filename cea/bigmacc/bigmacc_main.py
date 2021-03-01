@@ -79,9 +79,6 @@ def main(config):
     duration = 1000  # milliseconds
     freq = 440  # Hz
     winsound.Beep(freq, duration)
-    print('Writing the whole scenario to zarr.')
-    netcdf_writer.main(config, time_scale='whole')
-    winsound.Beep(freq, duration)
 
     print('Simulations completed. Move to next scenario.')
 

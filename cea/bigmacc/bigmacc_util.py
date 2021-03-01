@@ -47,6 +47,18 @@ def change_key(key):
     s[6] = '0'
     return "".join(s)
 
+def unique_PV(config):
+    rad_list = config.bigmacc.runradation
+
+    pv_list = []
+    for key in rad_list:
+        keys = [int(x) for x in str(key)]
+        if keys[7]==0:
+            pass
+        else:
+            pv_list.append(key)
+
+
 
 def create_rad_subs(config):
     all_keys = generate_key_list(config)

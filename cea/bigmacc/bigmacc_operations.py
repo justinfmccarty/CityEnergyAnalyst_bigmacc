@@ -79,11 +79,6 @@ def run_bigmacc(config):
 
         # INITIALIZE TIMER ---
         t0 = time.perf_counter()
-        if os.path.exists(os.path.join(config.bigmacc.data, config.general.parent, i)):
-            print(' - Folder exists for experiment {}.'.format(i))
-        else:
-            os.mkdir(os.path.join(config.bigmacc.data, config.general.parent, i))
-            print(' - Folder does not exist for experiment {}, creating now.'.format(i))
 
         # run the archetype mapper to leverage the newly loaded typology file and set parameters
         print(' - Running archetype mapper for experiment {} to remove changes made in the last experiment.'.format(i))
@@ -97,17 +92,20 @@ def run_bigmacc(config):
         print(' - Run radiation is {}.'.format(config.bigmacc.runrad))
         print(' - Write sensor data is {}.'.format(config.radiation.write_sensor_data))
 
-        old_rad_files = os.path.join(config.bigmacc.data, config.general.parent, i,
-                                     config.general.scenario_name, 'outputs', 'data', 'solar-radiation')
-        # checking on need for radiation simulation
+        # SIMULATION 1 checking on need for radiation simulation
+        unique_rad_files = os.path.join(config.bigmacc.data, config.general.parent, 'bigmacc_in',
+                                     util.change_key(i), 'solar-radiation')
         if i in config.bigmacc.runradiation:
+            # everytime the runradiation list is triggered a new set of files is loaded in
             shutil.rmtree(locator.get_solar_radiation_folder())
             if config.bigmacc.rerun == True:
                 print(' - Rerun mode, copying radiation files for experiment {}.'.format(i))
-                distutils.dir_util.copy_tree(old_rad_files, locator.get_solar_radiation_folder())
+                distutils.dir_util.copy_tree(unique_rad_files, locator.get_solar_radiation_folder())
             else:
                 print(' - Radiation running for experiment {}.'.format(i))
                 cea.resources.radiation_daysim.radiation_main.main(config)
+                print(' - Copying radiation files to repo for experiment {}.'.format(i))
+                distutils.dir_util.copy_tree(locator.get_solar_radiation_folder(), unique_rad_files)
         else:
             print(' - Previous iteration radiation files are equivalent for experiment {}.'.format(i))
 
@@ -115,7 +113,7 @@ def run_bigmacc(config):
             print(' - Radiation files for experiment {} not found, running radiation script.'.format(i))
             cea.resources.radiation_daysim.radiation_main.main(config)
 
-        # check to see if schedules need to be made
+        # SIMULATION 2 check to see if schedules need to be made
         bldg_names = locator.get_zone_building_names()
         for name in bldg_names:
             if not os.path.exists(locator.get_schedule_model_file(name)):
@@ -125,39 +123,45 @@ def run_bigmacc(config):
                 print(' - Schedules exist for building {}.'.format(name))
         print(' - Schedules exist for experiment {}.'.format(i))
 
-        # check to see if we need to rerun demand or if we can copy
-        if config.bigmacc.rerun != True:
-            print(' - Running demand simulation for experiment {}.'.format(i))
-            cea.demand.demand_main.main(config)
-        else:
-            # TODO paramterize this list
-            if keys[0] == 1:
-                print(' - Running demand simulation for experiment {}.'.format(i))
-                cea.demand.demand_main.main(config)
-            elif keys[6] == 1:
-                print(' - Running demand simulation for experiment {}.'.format(i))
-                cea.demand.demand_main.main(config)
-            else:
-                print(' - Copying demand results for experiment {}.'.format(i))
-                old_demand_files = os.path.join(config.bigmacc.data, config.general.parent, i,
-                                                config.general.scenario_name, 'outputs', 'data', 'demand')
-                distutils.dir_util.copy_tree(old_demand_files, locator.get_demand_results_folder())
+        # SIMULATION 3 run demand
+        # cea.demand.demand_main.main(config)
 
-        # if not os.path.exists(locator.get_demand_results_folder()):
-        #     print(' - Demand results for experiment {} not found, running radiation script.'.format(i))
+        # if config.bigmacc.rerun != True:
+        #     print(' - Running demand simulation for experiment {}.'.format(i))
         #     cea.demand.demand_main.main(config)
+        # else:
+        #     if keys[0] == 1:
+        #         print(' - Running demand simulation for experiment {}.'.format(i))
+        #         cea.demand.demand_main.main(config)
+        #     elif keys[6] == 1:
+        #         print(' - Running demand simulation for experiment {}.'.format(i))
+        #         cea.demand.demand_main.main(config)
+        #     else:
+        #         cea.demand.demand_main.main(config)
+        #         # print(' - Copying demand results for experiment {}.'.format(i))
+        #         # old_demand_files = os.path.join(config.bigmacc.data, config.general.parent, 'bigmacc_in',
+        #         #                                 config.bigmacc.key, 'demand')
+        #         # distutils.dir_util.copy_tree(old_demand_files, locator.get_demand_results_folder())
 
-        old_pv_files = os.path.join(config.bigmacc.data, config.general.parent, i,
-                                    config.general.scenario_name, 'outputs', 'data', 'potentials', 'solar')
+        if not os.path.exists(locator.get_demand_results_folder()):
+            print(' - Demand results for experiment {} not found, running radiation script.'.format(i))
+            cea.demand.demand_main.main(config)
+
+
+        # SIMULATION 4 check to see if pv needs to run
         if config.bigmacc.pv == True:
+            unique_pv_files = os.path.join(config.bigmacc.data, config.general.parent, 'bigmacc_in',
+                                        util.change_key(i), 'potentials', 'solar')
             if i in config.bigmacc.runradiation:
                 shutil.rmtree(locator.solar_potential_folder())
                 if config.bigmacc.rerun == True:
                     print(' - Rerun mode, copying PV files for experiment {}.'.format(i))
-                    distutils.dir_util.copy_tree(old_pv_files, locator.solar_potential_folder())
+                    distutils.dir_util.copy_tree(unique_pv_files, locator.solar_potential_folder())
                 else:
                     print(' - Radiation running for experiment {}.'.format(i))
                     photovoltaic.main(config)
+                    print(' - Copying PV files to repo for experiment {}.'.format(i))
+                    distutils.dir_util.copy_tree(locator.solar_potential_folder(),unique_pv_files)
             else:
                 print(' - Previous iteration PV results files are equivalent for experiment {}.'.format(i))
 
@@ -168,25 +172,12 @@ def run_bigmacc(config):
         else:
             print(f' - PV does not exist in scenario {i}.')
 
-        print('Run water-body exchange is {}.'.format(config.bigmacc.water))
-        # if water-body simulation is needed, run it.
-        if config.bigmacc.water == True:
-            print(' - Running water body simulation for experiment {}.'.format(i))
-            water.main(config)
-        else:
-            print(f' - Seawater loop does not exist in scenario {i}.')
-
-        # recalculating the supply split between grid and ng in the websrook DH
+        # SIMULATION 5 recalculating the supply split between grid and ng in the wesbrook DH
         if keys[4] == 1:
             print(' - Do not run district heat recalculation.')
         else:
             print(' - Run district heat recalculation.')
             cea.bigmacc.wesbrook_DH_multi.main(config)
-            # if len(config.demand.buildings) > 50:
-            #     cea.bigmacc.wesbrook_DH_multi.main(config)
-            # else:
-            #     cea.bigmacc.wesbrook_DH_single.main(config)
-
 
         # include PV results in demand results files for costing and emissions
         if keys[7] == 1:
@@ -198,65 +189,48 @@ def run_bigmacc(config):
         print(f' - Writing annual results for {i}.')
         util.rewrite_annual_demand(config)
 
-        # running the emissions and costing calculations
+        # SIMULATION 6 & 7 running the emissions and costing calculations
         print(' - Run cost and emissions scripts.')
         cea.analysis.costs.system_costs.main(config)
         cea.analysis.lca.main.main(config)
 
+        # FILE MANAGEMENT ---
+
         # clone out the simulation inputs and outputs directory
         print(' - Transferring results directory for experiment {}.'.format(i))
 
-        new_inputs_path = os.path.join(config.bigmacc.data, config.general.parent, i,
-                                       config.general.scenario_name, 'inputs')
-        new_outputs_path = os.path.join(config.bigmacc.data, config.general.parent, i,
-                                        config.general.scenario_name, 'outputs', 'data')
-        new_outputs_path_costs = os.path.join(config.bigmacc.data, config.general.parent, i,
-                                        config.general.scenario_name, 'outputs', 'data','costs')
-        new_outputs_path_emissions = os.path.join(config.bigmacc.data, config.general.parent, i,
-                                        config.general.scenario_name, 'outputs', 'data','emissions')
-        new_outputs_path_demand = os.path.join(config.bigmacc.data, config.general.parent, i,
-                                        config.general.scenario_name, 'outputs', 'data','demand')
-        new_outputs_path_occupancy = os.path.join(config.bigmacc.data, config.general.parent, i,
-                                        config.general.scenario_name, 'outputs', 'data','occupancy')
-        new_outputs_path_solar_radiation = os.path.join(config.bigmacc.data, config.general.parent, i,
-                                        config.general.scenario_name, 'outputs', 'data','solar-radiation')
-        new_outputs_path_solar_potential = os.path.join(config.bigmacc.data, config.general.parent, i,
-                                        config.general.scenario_name, 'outputs', 'data','potentials','solar')
-        new_outputs_path_water = os.path.join(config.bigmacc.data, config.general.parent, i,
-                                        config.general.scenario_name, 'outputs', 'data','potentials','Water_body_potential.csv')
+        new_inputs_path = os.path.join(config.bigmacc.data, config.general.parent, 'bigmacc_out',
+                                               config.bigmacc.key, 'inputs')
+        # new_outputs_path_demand = os.path.join(config.bigmacc.data, config.general.parent, 'bigmacc_out',
+        #                                        config.bigmacc.key, 'demand')
 
         if config.bigmacc.rerun != True:
-            distutils.dir_util.copy_tree(locator.get_data_results_folder(), new_outputs_path)
             distutils.dir_util.copy_tree(locator.get_input_folder(), new_inputs_path)
+            # distutils.dir_util.copy_tree(locator.get_demand_results_folder(), new_outputs_path_demand)
         else:
-            distutils.dir_util.copy_tree(locator.get_costs_folder(), new_outputs_path_costs)
-            distutils.dir_util.copy_tree(locator.get_lca_emissions_results_folder(), new_outputs_path_emissions)
-            distutils.dir_util.copy_tree(locator.get_demand_results_folder(), new_outputs_path_demand)
-            # distutils.dir_util.copy_tree(locator.get_schedule_model_folder(), new_outputs_path_occupancy)
-            # distutils.dir_util.copy_tree(locator.get_solar_radiation_folder(), new_outputs_path_solar_radiation)
-            # distutils.dir_util.copy_tree(locator.solar_potential_folder(), new_outputs_path_solar_potential)
-            # distutils.dir_util.copy_tree(locator.get_water_body_potential(), new_outputs_path_water)
+            distutils.dir_util.copy_tree(locator.get_input_folder(), new_inputs_path)
+            # distutils.dir_util.copy_tree(locator.get_demand_results_folder(), new_outputs_path_demand)
 
+        log_df = pd.read_csv(os.path.join(bigmacc_outputs_path, 'logger.csv'),
+                             index_col='Unnamed: 0')
         # write netcdf of hourly_results
+        print('Writing the hourly results to zarr.')
         netcdf_writer.main(config, time_scale='hourly')
+        if len(log_df['Completed']) < (len(netcdf_writer.generate_building_list(config)) - 1):
+            print('Writing the annual results to netcdf.')
+        else:
+            print('Writing the annual results to zarr.')
         netcdf_writer.main(config, time_scale='whole')
 
         time_elapsed = time.perf_counter() - t0
 
         # save log information
-        log_df = pd.read_csv(os.path.join(bigmacc_outputs_path, 'logger.csv'),
-                             index_col='Unnamed: 0')
         log_df = log_df.append(pd.DataFrame({'Experiments': 'exp_{}'.format(i),
                                              'Completed': 'True',
                                              'Experiment Time': time_elapsed,
                                              'Unique Radiation': config.bigmacc.runrad}, index=[0]), ignore_index=True)
         log_df.to_csv(os.path.join(bigmacc_outputs_path, 'logger.csv'))
         log_df.to_csv(r"C:\Users\justi\Desktop\126logger_backup.csv", )
-
-        # print(' - Purge results before next run (costs, demand, emissions).')
-        # shutil.rmtree(locator.get_costs_folder())
-        # shutil.rmtree(locator.get_demand_results_folder())
-        # shutil.rmtree(locator.get_lca_emissions_results_folder())
 
         # when the setpoint is changed it is in a deeper database than the archetypes mapper can reach so reset it here
         if keys[0] == 1:
