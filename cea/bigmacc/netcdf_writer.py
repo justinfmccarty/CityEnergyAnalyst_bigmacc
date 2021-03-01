@@ -280,7 +280,7 @@ def save_whole_dataset(config):
     log_df_path = os.path.join(bigmacc_outputs_path, 'logger.csv')
     log_df = pd.read_csv(os.path.join(log_df_path))
 
-    if len(log_df['Experiments'].values.tolist()) < 1:
+    if len(log_df['Completed'].values.tolist()) < 1:
         # create initial nc
         ann_res = whole_xr_get_annual_results_bldg(config, locator)
         ann_res = ann_res.rename_axis(None, axis=1).rename_axis('Name', axis=0)
@@ -294,7 +294,8 @@ def save_whole_dataset(config):
         return print(f' - Saved annual dataset netcdf to {netcdf_path}.')
     else:
         # create appended nc
-        if len(log_df['Completed']) < (len(generate_building_list(config)) - 1):
+        if len(log_df['Completed']) < (len(util.generate_key_list(config)) - 1):
+            print(' - Appending annual netcdf.')
             netcdf_path = os.path.join(config.bigmacc.data, config.general.parent,
                                        'bigmacc_out', config.bigmacc.round,
                                        f"whole_{config.general.parent}.nc")
