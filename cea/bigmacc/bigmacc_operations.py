@@ -124,7 +124,7 @@ def run_bigmacc(config):
         print(' - Schedules exist for experiment {}.'.format(i))
 
         # SIMULATION 3 run demand
-        # cea.demand.demand_main.main(config)
+        cea.demand.demand_main.main(config)
 
         # if config.bigmacc.rerun != True:
         #     print(' - Running demand simulation for experiment {}.'.format(i))
@@ -151,7 +151,7 @@ def run_bigmacc(config):
         # SIMULATION 4 check to see if pv needs to run
         if config.bigmacc.pv == True:
             unique_pv_files = os.path.join(config.bigmacc.data, config.general.parent, 'bigmacc_in',
-                                        util.change_key(i), 'potentials', 'solar')
+                                        util.change_key(i), 'solar')
             if i in config.bigmacc.runradiation:
                 shutil.rmtree(locator.solar_potential_folder())
                 if config.bigmacc.rerun == True:
