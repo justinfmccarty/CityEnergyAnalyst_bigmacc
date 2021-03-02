@@ -138,7 +138,6 @@ def run_bigmacc(config):
                 cea.demand.demand_main.main(config)
             else:
                 print(' - Copying demand results for experiment {}.'.format(i))
-                old_demand_files = os.path.join(r'F:\BIGMACC_WESBROOK\Projects', config.general.parent,
                                                 config.bigmacc.key,'initial','outputs','data','demand')
                 distutils.dir_util.copy_tree(old_demand_files, locator.get_demand_results_folder())
 
@@ -215,7 +214,7 @@ def run_bigmacc(config):
         # write netcdf of hourly_results
         print('Writing the hourly results to zarr.')
         netcdf_writer.main(config, time_scale='hourly')
-        if len(log_df['Completed']) < (len(netcdf_writer.generate_building_list(config)) - 1):
+        if len(log_df['Completed']) < (len(util.generate_key_list(config)) - 1):
             print('Writing the annual results to netcdf.')
         else:
             print('Writing the annual results to zarr.')
