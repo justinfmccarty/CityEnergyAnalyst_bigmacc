@@ -138,6 +138,7 @@ def run_bigmacc(config):
                 cea.demand.demand_main.main(config)
             else:
                 print(' - Copying demand results for experiment {}.'.format(i))
+                old_demand_files = os.path.join(r'D:\BIGMACC_WESBROOK\Projects', config.general.parent,
                                                 config.bigmacc.key,'initial','outputs','data','demand')
                 distutils.dir_util.copy_tree(old_demand_files, locator.get_demand_results_folder())
 
