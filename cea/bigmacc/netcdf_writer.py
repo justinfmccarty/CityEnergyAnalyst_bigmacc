@@ -149,38 +149,38 @@ def hourly_xr_create_hourly_dataset(config):
     print(' - Creating dataset.')
     d = xr.Dataset(
         data_vars=dict(
-            interior_temp_C=(["buildings", "times"], pd.DataFrame.from_dict(data[0]).to_numpy()),
-            pv_generated_kwh=(["buildings", "times"], pd.DataFrame.from_dict(data[1]).to_numpy()),
-            operative_temp_C=(["buildings", "times"], pd.DataFrame.from_dict(data[2]).to_numpy()),
-            district_dhw_kwh=(["buildings", "times"], pd.DataFrame.from_dict(data[3]).to_numpy()),
-            district_heat_kwh=(["buildings", "times"], pd.DataFrame.from_dict(data[4]).to_numpy()),
-            district_cool_kwh=(["buildings", "times"], pd.DataFrame.from_dict(data[5]).to_numpy()),
-            electric_aux_kwh=(["buildings", "times"], pd.DataFrame.from_dict(data[6]).to_numpy()),
-            electric_dhw_kwh=(["buildings", "times"], pd.DataFrame.from_dict(data[7]).to_numpy()),
-            electric_heating_kwh=(["buildings", "times"], pd.DataFrame.from_dict(data[8]).to_numpy()),
-            electric_cooling_kwh=(["buildings", "times"], pd.DataFrame.from_dict(data[9]).to_numpy()),
-            radiative_heat_loss_kwh=(["buildings", "times"], pd.DataFrame.from_dict(data[10]).to_numpy()),
-            solar_heat_gain=(["buildings", "times"], pd.DataFrame.from_dict(data[11]).to_numpy()),
+            interior_temp_C=(["times", "buildings"], pd.DataFrame.from_dict(data[0]).to_numpy()),
+            pv_generated_kwh=(["times", "buildings"], pd.DataFrame.from_dict(data[1]).to_numpy()),
+            operative_temp_C=(["times", "buildings"], pd.DataFrame.from_dict(data[2]).to_numpy()),
+            district_dhw_kwh=(["times", "buildings"], pd.DataFrame.from_dict(data[3]).to_numpy()),
+            district_heat_kwh=(["times", "buildings"], pd.DataFrame.from_dict(data[4]).to_numpy()),
+            district_cool_kwh=(["times", "buildings"], pd.DataFrame.from_dict(data[5]).to_numpy()),
+            electric_aux_kwh=(["times", "buildings"], pd.DataFrame.from_dict(data[6]).to_numpy()),
+            electric_dhw_kwh=(["times", "buildings"], pd.DataFrame.from_dict(data[7]).to_numpy()),
+            electric_heating_kwh=(["times", "buildings"], pd.DataFrame.from_dict(data[8]).to_numpy()),
+            electric_cooling_kwh=(["times", "buildings"], pd.DataFrame.from_dict(data[9]).to_numpy()),
+            radiative_heat_loss_kwh=(["times", "buildings"], pd.DataFrame.from_dict(data[10]).to_numpy()),
+            solar_heat_gain=(["times", "buildings"], pd.DataFrame.from_dict(data[11]).to_numpy()),
 
-            grid_supply_kwh=(["buildings", "times"], pd.DataFrame.from_dict(data[12]).to_numpy()),
-            electric_plug_kwh=(["buildings", "times"], pd.DataFrame.from_dict(data[13]).to_numpy()),
-            electric_vehicles_kwh=(["buildings", "times"], pd.DataFrame.from_dict(data[14]).to_numpy()),
-            electric_refrigerator_kwh=(["buildings", "times"], pd.DataFrame.from_dict(data[15]).to_numpy()),
-            electric_datacool_kwh=(["buildings", "times"], pd.DataFrame.from_dict(data[16]).to_numpy()),
-            electric_industrial_process_kwh=(["buildings", "times"], pd.DataFrame.from_dict(data[17]).to_numpy()),
-            electric_data_kwh=(["buildings", "times"], pd.DataFrame.from_dict(data[18]).to_numpy()),
-            ng_dhw_kwh=(["buildings", "times"], pd.DataFrame.from_dict(data[19]).to_numpy()),
-            ng_heat_kwh=(["buildings", "times"], pd.DataFrame.from_dict(data[20]).to_numpy()),
-            enduse_heat_sys_kwh=(["buildings", "times"], pd.DataFrame.from_dict(data[21]).to_numpy()),
-            enduse_heat_kwh=(["buildings", "times"], pd.DataFrame.from_dict(data[22]).to_numpy()),
-            enduse_dhw_sys_kwh=(["buildings", "times"], pd.DataFrame.from_dict(data[23]).to_numpy()),
-            enduse_dhw_kwh=(["buildings", "times"], pd.DataFrame.from_dict(data[24]).to_numpy()),
-            enduse_cool_sys_kwh=(["buildings", "times"], pd.DataFrame.from_dict(data[25]).to_numpy()),
-            enduse_cool_kwh=(["buildings", "times"], pd.DataFrame.from_dict(data[26]).to_numpy()),
+            grid_supply_kwh=(["times", "buildings"], pd.DataFrame.from_dict(data[12]).to_numpy()),
+            electric_plug_kwh=(["times", "buildings"], pd.DataFrame.from_dict(data[13]).to_numpy()),
+            electric_vehicles_kwh=(["times", "buildings"], pd.DataFrame.from_dict(data[14]).to_numpy()),
+            electric_refrigerator_kwh=(["times", "buildings"], pd.DataFrame.from_dict(data[15]).to_numpy()),
+            electric_datacool_kwh=(["times", "buildings"], pd.DataFrame.from_dict(data[16]).to_numpy()),
+            electric_industrial_process_kwh=(["times", "buildings"], pd.DataFrame.from_dict(data[17]).to_numpy()),
+            electric_data_kwh=(["times", "buildings"], pd.DataFrame.from_dict(data[18]).to_numpy()),
+            ng_dhw_kwh=(["times", "buildings"], pd.DataFrame.from_dict(data[19]).to_numpy()),
+            ng_heat_kwh=(["times", "buildings"], pd.DataFrame.from_dict(data[20]).to_numpy()),
+            enduse_heat_sys_kwh=(["times", "buildings"], pd.DataFrame.from_dict(data[21]).to_numpy()),
+            enduse_heat_kwh=(["times", "buildings"], pd.DataFrame.from_dict(data[22]).to_numpy()),
+            enduse_dhw_sys_kwh=(["times", "buildings"], pd.DataFrame.from_dict(data[23]).to_numpy()),
+            enduse_dhw_kwh=(["times", "buildings"], pd.DataFrame.from_dict(data[24]).to_numpy()),
+            enduse_cool_sys_kwh=(["times", "buildings"], pd.DataFrame.from_dict(data[25]).to_numpy()),
+            enduse_cool_kwh=(["times", "buildings"], pd.DataFrame.from_dict(data[26]).to_numpy()),
         ),
         coords=dict(
-            bldgs=("building", generate_building_list(config)),
-            time=time_arr,
+            times=time_arr,
+            buildings=("buildings", generate_building_list(config).tolist()),
         ),
         attrs=dict(scenario=scenario,
                    strategy_set=strategy,
@@ -283,7 +283,7 @@ def save_whole_dataset(config):
     if len(log_df['Completed'].values.tolist()) < 1:
         # create initial nc
         ann_res = whole_xr_get_annual_results_bldg(config, locator)
-        ann_res = ann_res.rename_axis(None, axis=1).rename_axis('Name', axis=0)
+        ann_res = ann_res.rename_axis(None, axis=1).rename_axis('building', axis=0)
         ann_res_ds = xr.Dataset.from_dataframe(ann_res, sparse=False)
         ann_res_ds = ann_res_ds.assign_coords(strategy_set=config.bigmacc.key)
 
@@ -301,7 +301,7 @@ def save_whole_dataset(config):
                                        f"whole_{config.general.parent}.nc")
 
             ann_res = whole_xr_get_annual_results_bldg(config, locator)
-            ann_res = ann_res.rename_axis(None, axis=1).rename_axis('Name', axis=0)
+            ann_res = ann_res.rename_axis(None, axis=1).rename_axis('building', axis=0)
             ann_res_ds = xr.Dataset.from_dataframe(ann_res, sparse=False)
             ann_res_ds = ann_res_ds.assign_coords(strategy_set=config.bigmacc.key)
 
@@ -315,15 +315,15 @@ def save_whole_dataset(config):
                                        f"whole_{config.general.parent}.nc")
             zarr_path = os.path.join(config.bigmacc.data, config.general.parent,
                                      'bigmacc_out', config.bigmacc.round,
-                                     f"annual_{config.general.parent}_{config.bigmacc.key}")
+                                     f"annual_{config.general.parent}")
             ann_res = whole_xr_get_annual_results_bldg(config, locator)
-            ann_res = ann_res.rename_axis(None, axis=1).rename_axis('Name', axis=0)
+            ann_res = ann_res.rename_axis(None, axis=1).rename_axis('building', axis=0)
             ann_res_ds = xr.Dataset.from_dataframe(ann_res, sparse=False)
             ann_res_ds = ann_res_ds.assign_coords(strategy_set=config.bigmacc.key)
 
             with xr.open_dataset(netcdf_path) as data:
                 file = xr.concat([data, ann_res_ds], dim='strategy_set')
-            file.to_zarr(zarr_path)
+            file.to_zarr(zarr_path,mode='w',consolidated=True)
             return print(f' - Saved annual dataset zarr to {zarr_path}.')
 
 def netcdf_hourly(config):
@@ -331,7 +331,7 @@ def netcdf_hourly(config):
     zarr_path = os.path.join(config.bigmacc.data, config.general.parent,
                                'bigmacc_out', config.bigmacc.round,
                                f"hourly_{config.general.parent}_{config.bigmacc.key}")
-    hourly.to_zarr(zarr_path)
+    hourly.to_zarr(zarr_path,mode='w',consolidated=True)
     return print(f' - Saved hourly dataset zarr to {zarr_path}')
 
 def main(config, time_scale='none'):
